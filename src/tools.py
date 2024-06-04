@@ -148,7 +148,9 @@ class Project:
         self.project_url = project_url
         self.dir = dir
         self.repo = Repo(dir)
-    
+        self.succeeded_patches = []
+        self.round_succeeded = False
+
     def _checkout(self, ref:str):
         self.repo.git.checkout(ref)
 
@@ -220,8 +222,10 @@ class Project:
         # print(f'Applying patch {f.name}')
         logging.info(f'Applying patch {f.name}')
         try:
-            self.repo.git.apply([f.name],v=True)
+            self.repo.git.apply([f.name])
             ret = 'Patch applied successfully'
+            self.succeeded_patches.append(patch)
+            self.round_succeeded = True
         except Exception as e:
             ret = f'Patch failed to apply with error: {e.stderr}'
 
@@ -257,14 +261,6 @@ def creat_viewcode_tool(project:Project):
     
     return viewcode
 
-
-# @tool
-# def get_patch(ref:str) -> str:
-#     '''
-#     Get a patch of a specific ref of the target repository.
-#     '''
-#     return project._get_patch(ref)
-
 def create_validate_tool(project:Project):
     @tool
     def validate(ref:str, patch:str) -> str:
@@ -274,3 +270,41 @@ def create_validate_tool(project:Project):
         return project._test_patch(ref, patch)
     
     return validate
+
+def split_patch(patch):
+    def split_block(lines:list[str]):
+        file_path_line_a = lines[0]
+        file_path_line_b = lines[1]
+        last_line = -1
+        for line_no in range(2, len(lines)):
+            if lines[line_no].startswith("@@"):
+                if last_line != -1:
+                    content=  file_path_line_a+ '\n' + file_path_line_b + '\n' + '\n'.join(lines[last_line:line_no])
+                    yield content
+                last_line = line_no
+        if last_line != -1:
+            content=  file_path_line_a+ '\n' + file_path_line_b + '\n'  + '\n'.join(lines[last_line:])
+            yield content
+
+    try:
+        lines = patch.splitlines()
+        fixed_lines = []
+
+        last_line = -1
+        fixed = False
+        for line_no in range(len(lines)):
+            if lines[line_no].startswith("--- a/"):
+                if last_line != -1:
+                    for x in split_block(lines[last_line:line_no]):
+                        yield x
+
+                last_line = line_no
+        if last_line != -1:
+            for x in split_block(lines[last_line:]):
+                yield x
+
+    except Exception as e:
+        logging.warning("Failed to revise patch")
+        logging.warning(e)
+        print(''.join(traceback.TracebackException.from_exception(e).format()))
+        return None

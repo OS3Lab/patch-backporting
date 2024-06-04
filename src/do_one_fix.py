@@ -1,4 +1,4 @@
-from tools import Project
+from tools import Project, split_patch
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from operator import itemgetter
@@ -8,6 +8,7 @@ from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents.format_scratchpad.openai_tools import format_to_openai_tool_messages
 from langchain.globals import set_debug
 from langchain_core.callbacks import FileCallbackHandler
+import logging
 from dotenv import load_dotenv
 import os
 from tools import Project
@@ -46,15 +47,25 @@ log_handler = FileCallbackHandler(logfile)
 
 patch = project._get_patch('7971f62120a55c141ec437aa3f0bacc1c1a3526b')
 
-agent_executor.invoke(
-    {
-        "project_url":"https://github.com/ffmpeg/ffmpeg",
-		"new_patch_parent":'82ad1b76751bcfad5005440db48c46a4de5d6f02',
-		"new_patch":patch,
-		"target_release":'6a69e7a2cbcacd8a9678675ed1e77cd26937b4f1'
-	},
-    {"callbacks": [log_handler]}
-)
+pps = split_patch(patch)
+for pp in pps:
+    project.round_succeeded = False
+    agent_executor.invoke(
+        {
+            "project_url":"https://github.com/ffmpeg/ffmpeg",
+            "new_patch_parent":'82ad1b76751bcfad5005440db48c46a4de5d6f02',
+            "new_patch":pp,
+            "target_release":'6a69e7a2cbcacd8a9678675ed1e77cd26937b4f1'
+        },
+        {"callbacks": [log_handler]}
+    )
+    if not project.round_succeeded:
+        logging.error(f"Failed to backport the patch hunk\n{pp}")
+        break
+else:
+    logging.info("Successfully backported the patch")
+    for patch in project.succeeded_patches:
+        print(patch)
 
 # agent_executor.invoke(
 #     {
