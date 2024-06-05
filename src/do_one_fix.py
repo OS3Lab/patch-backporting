@@ -32,11 +32,11 @@ prompt = ChatPromptTemplate.from_messages(
                 ]
             )
 
-project_url = 'https://github.com/FFmpeg/FFmpeg'
-new_patch = '7bba0dd6382e30d646cb406034a66199e071d713'
-new_patch_parent = '318e18402271fd0bca9c08ef82344b051bbcc1d1'
-target_release = '4c34f00ce89d03327cd7c14e6c3e28eab109eb22'
-project_dir = 'dataset/ffmpeg/ffmpeg'
+project_url = 'https://github.com/libsdl-org/libtiff.git'
+new_patch = '69818e2f2d246e6631ac2a2da692c3706b849c38'
+new_patch_parent = '6366e8f776a0fa0dd476d37b108eecdf42b950f3'
+target_release = 'b1f082b544ab698a768c1c566fe53f475bd50c9e'
+project_dir = 'dataset/libsdl-org/libtiff'
 
 project = Project(project_url, project_dir)
 
@@ -59,7 +59,7 @@ print(patch)
 pps = split_patch(patch)
 for idx,pp in enumerate(pps):
     project.round_succeeded = False
-    project._test_patch(new_patch_parent, pp)
+    project._test_patch(target_release, pp)
     if project.round_succeeded:
         logger.info(f"Hunk {idx} can be applied without any conflicts")
         continue
