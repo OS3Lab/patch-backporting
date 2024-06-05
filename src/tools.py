@@ -6,7 +6,7 @@ import io
 import subprocess
 import json
 import re
-import logging
+from logger import logger
 import tempfile
 import traceback
 
@@ -67,9 +67,9 @@ def revise_patch(patch: str, project_path: str) -> tuple[str, bool]:
         # find the context lines
         match_pos = find_sub_list(file_content,orignal_content)
         if len(match_pos) == 0:
-            logging.warning("No match found for the context")
+            logger.warning("No match found for the context")
         if len(match_pos) > 1:
-            logging.warning("Multiple matches found for the context")
+            logger.warning("Multiple matches found for the context")
         if len(match_pos) == 1:
             start = match_pos[0]
             if lines[-1][0] != ' ':
@@ -138,8 +138,8 @@ def revise_patch(patch: str, project_path: str) -> tuple[str, bool]:
 
         return "\n".join(fixed_lines)+'\n', fixed
     except Exception as e:
-        logging.warning("Failed to revise patch")
-        logging.warning(e)
+        logger.warning("Failed to revise patch")
+        logger.warning(e)
         print(''.join(traceback.TracebackException.from_exception(e).format()))
         return patch, False
 
@@ -212,22 +212,27 @@ class Project:
         # }
     
     def _test_patch(self, ref:str, patch:str) -> str:
-        print('test_patch',ref,patch)
+        # print('test_patch',ref,patch)
         self._checkout(ref)
         revised_patch, fixed = revise_patch(patch, self.dir)
         with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
             f.write(revised_patch)
-        print('revised_patch')
-        print(revised_patch)
+        # print('revised_patch')
+        # print(revised_patch)
+        logger.debug('original patch')
+        logger.debug(patch)
+        logger.debug('revised_patch')
+        logger.debug(revised_patch)
         # print(f'Applying patch {f.name}')
-        logging.info(f'Applying patch {f.name}')
+        logger.info(f'Applying patch {f.name}')
         try:
-            self.repo.git.apply([f.name])
+            self.repo.git.apply([f.name],v=True)
             ret = 'Patch applied successfully'
             self.succeeded_patches.append(patch)
             self.round_succeeded = True
         except Exception as e:
-            ret = f'Patch failed to apply with error: {e.stderr}'
+            ret = f'Patch failed to apply with error, context mismatch.'
+            ret += 'This patch does not apply, you CAN NOT send it to me again'
 
         # TODO: compile & PoC & testcase
         self.repo.git.reset('--hard')
@@ -304,7 +309,7 @@ def split_patch(patch):
                 yield x
 
     except Exception as e:
-        logging.warning("Failed to revise patch")
-        logging.warning(e)
+        logger.warning("Failed to revise patch")
+        logger.warning(e)
         print(''.join(traceback.TracebackException.from_exception(e).format()))
         return None

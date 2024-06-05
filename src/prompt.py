@@ -10,13 +10,35 @@ You have 3 tools: `viewcode` `locate_symbol` and `test_patch`
 2. startline: the start line of the code snippet you want to view.
 3. endline: the end line of the code snippet you want to view.
 
-- `locate_symbol` allows you to locate a symbol (function name for example) in a specific ref, so you can better navigate the codebase. the return value is in format `file_path:line_number`
+- `locate_symbol` allows you to locate a symbol (function name) in a specific ref, so you can better navigate the codebase. the return value is in format `file_path:line_number`
 0. ref: the commit hash of the ref you want to view the file from.
-1. symbol: the symbol you want to locate in the codebase.
+1. symbol: the function name you want to locate in the codebase.
 
 - `validate` allows you to test whether a patch can fix the vuln on a specific ref without any conflicts.
 0. ref: the commit hash of the ref you want to test the patch on.
 1. patch: the patch you want to test.
+
+Example of a patch format:
+```diff
+--- a/foo.c
++++ b/foo.c
+@@ -11,7 +11,9 @@
+}}
+
+int check (char *string) {{
++   if (string == NULL) {{
++       return 0;
++   }}
+-   return !strcmp(string, "hello");
++   return !strcmp(string, "hello world");
+}}
+int main() {{
+
+```
+Patch format explanation:
+1. Lines with `+` indicate additions in the current commit, the `+` should must located at the beginning of the line.
+2. Lines with `-` indicate deletions in the current commit, the `-` should must located at the beginning of the line.
+3. Lines with ` ` (space) remain unchanged in the current commit. They must be present the same way as in the original file.
 '''
 
 USER_PROMPT = '''
@@ -27,24 +49,28 @@ the project is {project_url}
 For the ref {new_patch_parent},
 the patch below is merged to fix a security issue.
 
-```
-{new_patch}
-```
-
 i want to backport it to ref {target_release}
 the patch can not be cherry-picked directly because of conflicts. 
 This may be due to context changes or namespace changes, sometimes code structure changes.
 
+below is the patch you need to backport:
+
+```diff
+{new_patch}
+```
+
 Your workflow should be:
 1. Review the patch of the newer version
-2. review the file in the old codebase and understand why it can not be cherry-picked directly.
-3. craft a patch for the older version that can fix the vuln.
-4. test the patch on the older version to make sure it can be applied without any conflicts.
+2. Review the file in the old codebase and understand why it can not be cherry-picked directly.
+3. Based on the old codebase, craft a patch that can fix the vuln.
+4. Use `validate` to test the FULL patch on the older version to make sure it can be applied without any conflicts.
 
 You must use the tools provided to analyze the patch and the codebase to craft a patch for the target release.
-The patch you craft should be in the unified diff format and does not contain any shortcuts like `...`.
-At the beginning and end of the hunk of the crafted patch, there are MUST MUST at least 3 lines of context.
+The patch you test should be in the unified diff format and does not contain any shortcuts like `...`.
+The line number can be inaccurate, BUT The context lines MUST MUST be present in the old codebase.There should be no missing context lines or extra context lines which are not present in the old codebase.
+
 In most cases, the fixing logic is the same as the newer version. You MUST not introduce any new bugs or vulnerabilities.
-And finally, you MUST use `validate` to test your patch on the target release to make sure it can fix the vuln without any conflicts. 
+And finally, you MUST use the `validate` tool to test your FULL patch on the target release to make sure it can fix the vuln without any conflicts. 
 Or you need to revise your patch and test it again.
+
 '''
