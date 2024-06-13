@@ -1,3 +1,12 @@
+'''
+context window = input + output, gpt-4-turbo: 128k
+In terms of characters, 3-4 characters of English are about one token. This can drop all the way to 0.4 characters per token in Chinese.
+
+Reference
+https://platform.openai.com/docs/models/gpt-4-turbo-and-gpt-4
+https://community.openai.com/t/character-limit-response-for-the-gpt-3-5-api/426713/2
+'''
+
 import datetime
 import requests
 from dotenv import load_dotenv
@@ -5,6 +14,7 @@ import os
 
 load_dotenv()
 
+# per 1000 tokens
 price = {
     'gpt-4-turbo':(0.01, 0.03),
     'gpt-4-turbo-2024-04-09':(0.01, 0.03),
@@ -30,19 +40,26 @@ def get_usage(api_key):
         return resp_billing.text
     
     billing_data = resp_billing.json()
-    total = 0.0
+    total_price = 0.0
+    total_consume_input = 0
+    total_consume_output = 0
     for item in billing_data['data']:
         if item['snapshot_id'] in price:
             input_p , output_p = price[item['snapshot_id']]
-            total += item['n_context_tokens_total'] * input_p/1000
-            total += item['n_generated_tokens_total'] * output_p/1000
+            total_consume_input += item['n_context_tokens_total']
+            total_price += item['n_context_tokens_total'] * input_p/1000
+            total_consume_output += item['n_generated_tokens_total']
+            total_price += item['n_generated_tokens_total'] * output_p/1000
         else:
             print(f"Unknown model: {item['snapshot_id']}")
 
-    print(f"Total cost: ${total:.2f}")
-    return total
+    print(f"\nCurrent time: {datetime.datetime.now()}")
+    print(f"Total cost: ${total_price:.2f}")
+    print(f"Total consume input: {total_consume_input/1000}(k), output: {total_consume_output/1000}(k)")
+    print(f"Total consume tokens: {total_consume_input/1000+total_consume_output/1000}(k)\n")
+    return total_price
                 
 
 if __name__ == '__main__':
     
-    print(get_usage(os.getenv("OPENAI_API_KEY")))
+    get_usage(os.getenv("OPENAI_API_KEY"))
