@@ -9,6 +9,44 @@ import re
 from logger import logger
 import tempfile
 import traceback
+import Levenshtein
+from typing import List, Tuple
+
+def find_most_similar_block(code_snippet: str, lines: List[str], snippet_num: int) -> int:
+    min_distance = float('inf')
+    best_start_index = -1
+
+    for i in range(len(lines) - snippet_num + 1): 
+        combined = '\n'.join(lines[i: i + snippet_num])
+        # for j in range(snippet_num):
+        #     combined += ''.join(lines[i + j].strip())
+        
+        distance = Levenshtein.distance(combined, code_snippet)
+        if distance < min_distance:
+            min_distance = distance
+            best_start_index = i + 1
+
+    return best_start_index
+
+def process_string(input_string: str) -> tuple[str, int]:
+    
+    lines = input_string.split('\n')
+    processed_lines = []
+    
+    for line in lines[3:-1]:
+        if line.startswith(' '):
+            processed_lines.append(line[1:])
+        elif line.startswith('-'):
+            processed_lines.append(line[1:])
+        elif line.startswith('+'):
+            continue
+        else:
+            processed_lines.append(line)
+    
+    processed_lines_count = len(processed_lines)
+    processed_string = '\n'.join(processed_lines)
+    
+    return processed_string, processed_lines_count
 
 def find_sub_list(lst,neddle):
     match_pos = []
@@ -172,7 +210,10 @@ class Project:
                     print('Error parsing line:',line)
 
     def _viewcode(self, ref:str, path:str, startline:int, endline:int) -> str:
-        file = self.repo.tree(ref) / path
+        try: 
+            file = self.repo.tree(ref) / path
+        except:
+            return "This file doesn't exist in this commit."
         content = file.data_stream.read().decode('utf-8')
         lines = content.split('\n')
         ret = []
@@ -182,7 +223,10 @@ class Project:
         return '\n'.join(ret)
     
     def _get_patch(self, ref:str) -> str:
-        return self.repo.git.show(f'{ref}^..{ref}')
+        try:
+            return self.repo.git.show(f'{ref}^..{ref}')
+        except:
+            return "Error commit id, please check if the commit id is correct."
     
     def _locate_symbol(self, ref:str, symbol:str) -> str:
         self._checkout(ref)
@@ -231,9 +275,24 @@ class Project:
             self.succeeded_patches.append(patch)
             self.round_succeeded = True
         except Exception as e:
-            ret = f'Patch failed to apply with error, context mismatch.'
-            ret += 'This patch does not apply, you CAN NOT send it to me again'
-
+            ret = f'Patch failed to apply with error, context mismatch.\n'
+            ret += 'This patch does not apply, you CAN NOT send it to me again. Repeated patches will harm the lives of others.\n'
+            ret += 'Next I\'ll give you the context of the previous error patch in the old version, and you should modify the previous error patch according to this section.\n'
+            path = re.findall(r"--- a/(.*)", revised_patch)[0]
+            file = self.repo.tree(ref) / path
+            content = file.data_stream.read().decode('utf-8')
+            lines = content.split('\n')
+            context, num_context = process_string(revised_patch)
+            lineno = find_most_similar_block(context, lines, num_context)
+            startline = max(lineno - 5, 0)
+            endline = min(lineno + 5 + num_context, len(lines))
+            ret += 'Here are lines {} through {} of file {} for commit {}.\n'.format(startline, endline, path, ref)
+            ret += '```code snippet\n'
+            for i in range(startline, endline):
+                ret = ret + lines[i] + '\n'
+            ret += '```\n'
+            ret += 'Please replace the error context in the error patch using the code in the code snippet above.(Including the difference between SPACE and INDENTATION.)\n'
+            ret += 'Or use tools `locate_symbol` and `viewcode` to re-check patch-related code snippet.\n'
         # TODO: compile & PoC & testcase
         self.repo.git.reset('--hard')
         return ret
@@ -293,23 +352,28 @@ def split_patch(patch):
 
     try:
         lines = patch.splitlines()
-        fixed_lines = []
-
+        message = ''
         last_line = -1
         fixed = False
         for line_no in range(len(lines)):
             if lines[line_no].startswith("--- a/"):
-                if last_line != -1:
-                    for x in split_block(lines[last_line:line_no]):
-                        yield x
-
-                last_line = line_no
-        if last_line != -1:
+                if last_line >= 0:
+                    print("_______________________________________ll_______")
+                    print(lines[line_no], last_line)
+                    for x in split_block(lines[last_line:line_no - 2]):
+                        yield message + x
+                if last_line == -1:
+                    message = '\n'.join(lines[:line_no - 2])
+                if lines[line_no].endswith(".rst") or lines[line_no].endswith(".yaml") or lines[line_no].endswith(".yml") or lines[line_no].endswith(".md"):
+                    last_line = -2
+                else: 
+                    last_line = line_no
+        if last_line >= 0:
             for x in split_block(lines[last_line:]):
-                yield x
+                yield message + x
 
     except Exception as e:
-        logger.warning("Failed to revise patch")
+        logger.warning("Failed to split patch")
         logger.warning(e)
         print(''.join(traceback.TracebackException.from_exception(e).format()))
         return None
