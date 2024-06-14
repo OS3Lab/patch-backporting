@@ -32,11 +32,11 @@ prompt = ChatPromptTemplate.from_messages(
                 ]
             )
 
-project_url = 'https://github.com/libsdl-org/libtiff.git'
-new_patch = '69818e2f2d246e6631ac2a2da692c3706b849c38'
-new_patch_parent = '6366e8f776a0fa0dd476d37b108eecdf42b950f3'
-target_release = 'b1f082b544ab698a768c1c566fe53f475bd50c9e'
-project_dir = 'dataset/libsdl-org/libtiff'
+project_url = 'https://github.com/FFmpeg/FFmpeg'
+new_patch = '7971f62120a55c141ec437aa3f0bacc1c1a3526b'
+new_patch_parent = '82ad1b76751bcfad5005440db48c46a4de5d6f02'
+target_release = '6a69e7a2cbcacd8a9678675ed1e77cd26937b4f1'
+project_dir = 'dataset/FFmpeg/FFmpeg'
 
 project = Project(project_url, project_dir)
 
@@ -57,7 +57,7 @@ patch = project._get_patch(new_patch)
 print(patch)
 
 pps = split_patch(patch)
-for idx,pp in enumerate(pps):
+for idx, pp in enumerate(pps):
     project.round_succeeded = False
     project._test_patch(target_release, pp)
     if project.round_succeeded:
@@ -65,6 +65,7 @@ for idx,pp in enumerate(pps):
         continue
     else:
         logger.info(f'Hunk {idx} can not be applied, using LLM to generate a fix')
+        logger.info(f"Patch in the new version as below\n----------------------------------\n{pp}\n----------------------------------\n")
         agent_executor.invoke(
             {
                 "project_url": project_url,
@@ -75,7 +76,7 @@ for idx,pp in enumerate(pps):
             {"callbacks": [log_handler]}
         )
         if not project.round_succeeded:
-            logger.error(f"Failed to backport the hunk {idx} \n----------------------------------\n{pp}----------------------------------\n")
+            logger.error(f"Failed to backport the hunk {idx} \n----------------------------------\n{pp}\n----------------------------------\n")
             logger.error(f"Abort")
             break
 else:
