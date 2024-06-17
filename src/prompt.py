@@ -4,7 +4,7 @@ Your TASK is to backport a patch fixing a vuln from a newer(release) version of 
 In patch backports, patches are often not used directly due to changes in CONTEXT or changes in patch logic.
 Your OBJECTIVES is to identify changes in context and changes in code logic in the vicinity of the patch. Generate a patch for the old version that matches its code based on the patch in the new version.
 
-You have 3 tools: `viewcode` `locate_symbol` and `test_patch`
+You have 3 tools: `viewcode` `locate_symbol` and `validate`
 
 - `viewcode` allows you to view a file in the codebase of a ref
 0. ref: the commit hash of the ref you want to view the file from.
@@ -50,14 +50,13 @@ Patch format explanation:
 8. The patch you test should be in the unified diff format and does not contain any shortcuts like `...`.
 '''
 
-USER_PROMPT = '''
+USER_PROMPT_HUNK = '''
 I will give ten dollar tip for your assistance to create a patch for the identified issues. Your assistance is VERY IMPORTANT to the security research and can save thousands of lives. You can access the program's code using the provided tools. 
 
 The project is {project_url}.
 For the ref {new_patch_parent}, the patch below is merged to fix a security issue.
 
-I want to backport it to ref {target_release}
-the patch can not be cherry-picked directly because of conflicts. 
+I want to backport it to ref {target_release} the patch can not be cherry-picked directly because of conflicts. 
 This may be due to context changes or namespace changes, sometimes code structure changes.
 
 below is the patch you need to backport:
@@ -79,4 +78,24 @@ The line number can be inaccurate, BUT The context lines MUST MUST be present in
 
 If you can generate a patch and confirm that it is correct—meaning the patch does not contain grammatical errors, can fix the bug, and does not introduce new bugs—please generate the patch diff file. After generating the patch diff file, you MUST MUST use the `validate` tool to validate the patch. Otherwise, you MUST continue to gather information using these tools.
 
+'''
+
+
+USER_PROMPT_PATCH = '''
+I will give ten dollar tip for your assistance to create a patch for the identified issues. Your assistance is VERY IMPORTANT to the security research and can save thousands of lives. You can access the program's code using the provided tools. 
+
+The project is {project_url}. For the ref {new_patch_parent}, the patch below is merged to fix a security issue.
+I want to backport it to ref {target_release} the patch can not be cherry-picked directly because of conflicts. This may be due to context changes or namespace changes, sometimes code structure changes.
+Below is the patch you need to backport:
+
+```diff
+{new_patch}
+```
+
+{error_message}
+Your workflow should be:
+1. Review the patch of the newer version. 
+3. Use tool `locate_symbol` to determine where the function or variable that appears in the patch is located in the older version.
+4. Use tool `viewcode` to view the location of the symbol given by `locate_symbol`. Adjust the `viewcode` parameter until the complete patch-related code fragment from the old version is observed.
+5. Based on the code given by `viewcode`, craft a patch that can fix the vuln.
 '''

@@ -12,7 +12,7 @@ from logger import logger
 from dotenv import load_dotenv
 import os
 from tools import Project
-from prompt import SYSTEM_PROMPT, USER_PROMPT
+from prompt import SYSTEM_PROMPT, USER_PROMPT_HUNK, USER_PROMPT_PATCH
 
 
 load_dotenv()
@@ -27,21 +27,21 @@ llm = ChatOpenAI(temperature=0, model="gpt-4-turbo", api_key=api_key,
 prompt = ChatPromptTemplate.from_messages(
                 [
                     ("system", SYSTEM_PROMPT),
-                    ("user", USER_PROMPT),
+                    ("user", USER_PROMPT_HUNK),
                     MessagesPlaceholder(variable_name="agent_scratchpad"),
                 ]
             )
 
-project_url = 'https://github.com/FFmpeg/FFmpeg'
-new_patch = '7971f62120a55c141ec437aa3f0bacc1c1a3526b'
-new_patch_parent = '82ad1b76751bcfad5005440db48c46a4de5d6f02'
-target_release = '6a69e7a2cbcacd8a9678675ed1e77cd26937b4f1'
-project_dir = 'dataset/FFmpeg/FFmpeg'
+project_url = 'https://github.com/FFmpeg/FFmpeg.git'
+new_patch = '7bba0dd6382e30d646cb406034a66199e071d713'
+new_patch_parent = '318e18402271fd0bca9c08ef82344b051bbcc1d1'
+target_release = '4c34f00ce89d03327cd7c14e6c3e28eab109eb22'
+patch_target = ''
+project_dir = '/home/sjy/LLM_Backport/FFmpeg'
+build_sh_path = ''
 
-project = Project(project_url, project_dir)
-
+project = Project(project_url, project_dir, build_sh_path)
 viewcode, locate_symbol, validate = project.get_tools()
-
 tools = [viewcode,  locate_symbol, validate]
 agent = create_tool_calling_agent(llm, tools, prompt)
 agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, max_iterations=30)
@@ -50,16 +50,16 @@ agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, max_itera
 logfile = "output.log"
 log_handler = FileCallbackHandler(logfile)
 
-
-
+'''
+split patch into hunks and try to backport each hunk, if failed, use LLM to generate a fix
+'''
 patch = project._get_patch(new_patch)
-
-print(patch)
-
+# patch = project._get_patch(patch_target)
+# print(patch)
 pps = split_patch(patch)
 for idx, pp in enumerate(pps):
     project.round_succeeded = False
-    project._test_patch(target_release, pp)
+    project._apply_hunks(target_release, pp)
     if project.round_succeeded:
         logger.info(f"Hunk {idx} can be applied without any conflicts")
         continue
@@ -78,11 +78,47 @@ for idx, pp in enumerate(pps):
         if not project.round_succeeded:
             logger.error(f"Failed to backport the hunk {idx} \n----------------------------------\n{pp}\n----------------------------------\n")
             logger.error(f"Abort")
-            break
+            exit(1)
+
+'''
+now all hunks can be applied successfully, merge them and try to compile, if failed, use LLM to generate a fix
+'''
+project.all_hunks_applied_succeeded = True
+logger.info("Successfully apply all hunks, try to join all hunks into one patch and test")
+complete_patch = '\n'.join(project.succeeded_patches) + '\n'
+compile_ret = project._compile_patch(target_release, complete_patch) + '\n'
+print(complete_patch)
+
+if project.compile_succeeded:
+    logger.info(f"Successfully apply and compile the patch to target release {target_release}")
 else:
-    logger.info("Successfully backported the patch")
-    for patch in project.succeeded_patches:
-        print(patch)
+    print(compile_ret)
+    exit(1)
+    prompt = ChatPromptTemplate.from_messages(
+                [
+                    ("system", SYSTEM_PROMPT),
+                    ("user", USER_PROMPT_PATCH),
+                    MessagesPlaceholder(variable_name="agent_scratchpad"),
+                ]
+            )
+    agent = create_tool_calling_agent(llm, tools, prompt)
+    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, max_iterations=5)
+    agent_executor.invoke(
+        {
+            "project_url": project_url,
+            "new_patch_parent":new_patch_parent,
+            "new_patch":complete_patch,
+            "target_release":target_release,
+            "error_message":compile_ret
+        },
+        {"callbacks": [log_handler]}
+    )
+    if not project.compile_succeeded:
+        logger.error(f"Failed to complie the patch\n")
+        logger.error(f"Abort")
+    else:
+        logger.info(f"Successfully backport the patch to target release {target_release}")
+
 
 # agent_executor.invoke(
 #     {

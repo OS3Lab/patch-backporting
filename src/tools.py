@@ -182,12 +182,15 @@ def revise_patch(patch: str, project_path: str) -> tuple[str, bool]:
         return patch, False
 
 class Project:
-    def __init__(self, project_url:str, dir:str):
+    def __init__(self, project_url:str, dir:str, sh_path:str=''):
         self.project_url = project_url
         self.dir = dir
+        self.build_sh_path = sh_path
         self.repo = Repo(dir)
         self.succeeded_patches = []
         self.round_succeeded = False
+        self.all_hunks_applied_succeeded = False
+        self.compile_succeeded = False
 
     def _checkout(self, ref:str):
         self.repo.git.checkout(ref)
@@ -255,9 +258,10 @@ class Project:
         #     },
         # }
     
-    def _test_patch(self, ref:str, patch:str) -> str:
+    def _apply_hunks(self, ref:str, patch:str) -> str:
         # print('test_patch',ref,patch)
         self._checkout(ref)
+        self.repo.git.reset('--hard')
         revised_patch, fixed = revise_patch(patch, self.dir)
         with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
             f.write(revised_patch)
@@ -293,7 +297,63 @@ class Project:
             ret += '```\n'
             ret += 'Please replace the error context in the error patch using the code in the code snippet above.(Including the difference between SPACE and INDENTATION.)\n'
             ret += 'Or use tools `locate_symbol` and `viewcode` to re-check patch-related code snippet.\n'
-        # TODO: compile & PoC & testcase
+        self.repo.git.reset('--hard')
+        return ret
+    
+    def _compile_patch(self, ref: str, complete_patch: str) -> str:
+        """
+        if all hunks could be applied successfully
+        compile the patch, return error message if failed
+        """
+        self._checkout(ref)
+        self.repo.git.reset('--hard')
+        ret = ''
+        # apply joined patch
+        with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
+            f.write(complete_patch)
+        try:
+            self.repo.git.apply([f.name],v=True)
+            logger.info(f'The joined patch could {f.name} be applied successfully')
+        except Exception as e:
+            logger.info(f'Failed to apply Complete patch {f.name}')
+            # TODO: 反馈具体哪一行不能apply, 让大模型直接修改整个patch
+            error_msg = ''
+            ret += 'The joined patch could not be applied successfully, please try to revise the patch with provided tools and the following error message during applying the patch:\n'
+            ret += error_msg
+            self.repo.git.reset('--hard')
+            return ret
+        
+        # compile the patch
+        logger.info(f'Start compile the patched source code')
+        build_process = subprocess.Popen(
+            ['/bin/bash', self.build_sh_path],
+            stdin=subprocess.DEVNULL,
+            # stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=self.dir,
+            # env=env,
+            # shell=True,
+            # executable="/bin/bash",
+        )
+        try:
+            stdout, stderr = build_process.communicate(timeout=60 * 60)
+        except subprocess.TimeoutExpired:
+            build_process.kill()
+            ret += f'The compilation process of the patched source code is timeout.'
+            exit(1)
+
+        if build_process.returncode != 0:
+            logger.info(f'\nCompilation failed\n{stderr}\n')
+            compile_result = stderr.decode('utf-8')   
+            ret += 'The source code could not be compiled successfully after applying the patch. '
+            ret += 'Next I\'ll give you the error message during compiling, and you should modify the error patch.'
+            ret += f'Here is the error message:\n{compile_result}\n'
+            ret += 'Please revise the patch with above error message.'
+            ret += 'Or use tools `locate_symbol` and `viewcode` to re-check patch-related code snippet. '
+            ret += 'Please DO NOT send the same patch to me, repeated patches will harm the lives of others.\n'
+        else:
+            ret += 'The patched source code could be compiled successfully! I really thank you for your great efforts.\n'
+            self.compile_succeeded = True
         self.repo.git.reset('--hard')
         return ret
     
@@ -331,7 +391,10 @@ def create_validate_tool(project:Project):
         '''
         validate a patch on a specific ref of the target repository.
         '''
-        return project._test_patch(ref, patch)
+        if project.all_hunks_applied_succeeded:
+            return project._compile_patch(ref, patch)
+        else:
+            return project._apply_hunks(ref, patch)
     
     return validate
 
