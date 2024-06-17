@@ -18,6 +18,14 @@ from prompt import SYSTEM_PROMPT, USER_PROMPT_HUNK, USER_PROMPT_PATCH
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 base_url = os.getenv("OPENAI_BASE_URL")
+project_url = os.getenv("PROJECT_URL")
+new_patch = os.getenv("NEW_PATCH")
+new_patch_parent = os.getenv("NEW_PATCH_PARENT")
+target_release = os.getenv("TARGET_RELEASE")
+patch_target = os.getenv("PATCH_TARGET")
+project_dir = os.getenv("PROJECT_DIR")
+build_sh_path = os.getenv("BUILD_SH_PATH")
+
 if base_url is None:
     base_url = 'https://api.openai.com/v1'
 
@@ -31,14 +39,6 @@ prompt = ChatPromptTemplate.from_messages(
                     MessagesPlaceholder(variable_name="agent_scratchpad"),
                 ]
             )
-
-project_url = 'https://github.com/FFmpeg/FFmpeg.git'
-new_patch = '7bba0dd6382e30d646cb406034a66199e071d713'
-new_patch_parent = '318e18402271fd0bca9c08ef82344b051bbcc1d1'
-target_release = '4c34f00ce89d03327cd7c14e6c3e28eab109eb22'
-patch_target = ''
-project_dir = '/home/sjy/LLM_Backport/FFmpeg'
-build_sh_path = ''
 
 project = Project(project_url, project_dir, build_sh_path)
 viewcode, locate_symbol, validate = project.get_tools()
