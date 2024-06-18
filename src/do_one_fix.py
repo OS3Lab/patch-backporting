@@ -13,18 +13,25 @@ from dotenv import load_dotenv
 import os
 from tools import Project
 from prompt import SYSTEM_PROMPT, USER_PROMPT_HUNK, USER_PROMPT_PATCH
+import yaml
 
 
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 base_url = os.getenv("OPENAI_BASE_URL")
-project_url = os.getenv("PROJECT_URL")
-new_patch = os.getenv("NEW_PATCH")
-new_patch_parent = os.getenv("NEW_PATCH_PARENT")
-target_release = os.getenv("TARGET_RELEASE")
 patch_target = os.getenv("PATCH_TARGET")
 project_dir = os.getenv("PROJECT_DIR")
-build_sh_path = os.getenv("BUILD_SH_PATH")
+patch_dataset_dir = os.getenv("PATCH_DATASET_DIR")
+
+with open(patch_dataset_dir + 'config.yml', 'r') as file:
+    config = yaml.safe_load(file)
+project = config['project']
+project_url = config['project_url']
+new_patch = config['new_patch']
+new_patch_parent = config['new_patch_parent']
+target_release = config['target_release']
+sanitizer = config['sanitizer']
+error_message = config['error_massage']
 
 if base_url is None:
     base_url = 'https://api.openai.com/v1'
