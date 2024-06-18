@@ -53,7 +53,7 @@ prompt = ChatPromptTemplate.from_messages(
                 ]
             )
 
-project = Project(project_url, project_dir, build_sh_path)
+project = Project(project_url, project_dir, patch_dataset_dir)
 viewcode, locate_symbol, validate = project.get_tools()
 tools = [viewcode,  locate_symbol, validate]
 agent = create_tool_calling_agent(llm, tools, prompt)
@@ -66,10 +66,27 @@ log_handler = FileCallbackHandler(logfile)
 '''
 split patch into hunks and try to backport each hunk, if failed, use LLM to generate a fix
 '''
-patch = project._get_patch(new_patch)
+
+tmp_patch = '''--- a/tools/tiffcp.c
++++ b/tools/tiffcp.c
+@@ -1490,6 +1490,13 @@
+ 		return 0;
+ 	}
++
++	if ((imagew - tilew * spp) > INT_MAX) {
++		TIFFError(TIFFFileName(in),
++		          "Error, image raster scan line size is too large");
++		return 0;
++	}
++
+ 	iskew = imagew - tilew*spp;
+ 	tilebuf = limitMalloc(tilesize);
+ 	if (tilebuf == 0)
+'''
+# patch = project._get_patch(new_patch)
 # patch = project._get_patch(patch_target)
-# print(patch)
-pps = split_patch(patch)
+# pps = split_patch(patch)
+pps = [tmp_patch]
 for idx, pp in enumerate(pps):
     project.round_succeeded = False
     project._apply_hunks(target_release, pp)
@@ -100,39 +117,62 @@ now all hunks can be applied successfully, merge them and try to compile, if fai
 '''
 project.all_hunks_applied_succeeded = True
 logger.info("Successfully apply all hunks, try to join all hunks into one patch and test")
-complete_patch = '\n'.join(project.succeeded_patches) + '\n'
-compile_ret = project._compile_patch(target_release, complete_patch) + '\n'
+complete_patch = '\n'.join(project.succeeded_patches)
 print(complete_patch)
 
+
+validate_ret = ''
+validate_ret += project._compile_patch(target_release, complete_patch)
 if project.compile_succeeded:
-    logger.info(f"Successfully apply and compile the patch to target release {target_release}")
+    validate_ret += project._run_testcase(target_release, complete_patch)
+    if project.testcase_succeeded:
+        validate_ret += project._run_poc(error_message)
+        if project.poc_succeeded:
+            logger.info(f"Successfully apply and compile the patch to target release {target_release}")
+            exit(0)
+
+# project.testcase_succeeded = True
+# validate_ret += project._compile_patch(target_release, complete_patch)
+# if project.compile_succeeded:
+#     validate_ret += project._run_poc(error_message)
+#     if project.poc_succeeded:
+#         logger.info(f"Successfully apply and compile the patch to target release {target_release}")
+#         exit(0)
+
+# project.compile_succeeded = True
+# project.testcase_succeeded = True
+# validate_ret += project._run_poc(error_message)
+# if project.poc_succeeded:
+#     logger.info(f"Successfully apply and compile the patch to target release {target_release}")
+#     exit(0)
+
+print(validate_ret)
+exit(1)
+
+prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", SYSTEM_PROMPT),
+                ("user", USER_PROMPT_PATCH),
+                MessagesPlaceholder(variable_name="agent_scratchpad"),
+            ]
+        )
+agent = create_tool_calling_agent(llm, tools, prompt)
+agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, max_iterations=5)
+agent_executor.invoke(
+    {
+        "project_url": project_url,
+        "new_patch_parent":new_patch_parent,
+        "new_patch":complete_patch,
+        "target_release":target_release,
+        "error_message":validate_ret
+    },
+    {"callbacks": [log_handler]}
+)
+if not project.compile_succeeded:
+    logger.error(f"Failed to complie the patch\n")
+    logger.error(f"Abort")
 else:
-    print(compile_ret)
-    exit(1)
-    prompt = ChatPromptTemplate.from_messages(
-                [
-                    ("system", SYSTEM_PROMPT),
-                    ("user", USER_PROMPT_PATCH),
-                    MessagesPlaceholder(variable_name="agent_scratchpad"),
-                ]
-            )
-    agent = create_tool_calling_agent(llm, tools, prompt)
-    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, max_iterations=5)
-    agent_executor.invoke(
-        {
-            "project_url": project_url,
-            "new_patch_parent":new_patch_parent,
-            "new_patch":complete_patch,
-            "target_release":target_release,
-            "error_message":compile_ret
-        },
-        {"callbacks": [log_handler]}
-    )
-    if not project.compile_succeeded:
-        logger.error(f"Failed to complie the patch\n")
-        logger.error(f"Abort")
-    else:
-        logger.info(f"Successfully backport the patch to target release {target_release}")
+    logger.info(f"Successfully backport the patch to target release {target_release}")
 
 
 time.sleep(10)
