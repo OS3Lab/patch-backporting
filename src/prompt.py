@@ -84,18 +84,30 @@ If you can generate a patch and confirm that it is correct—meaning the patch d
 USER_PROMPT_PATCH = '''
 I will give ten dollar tip for your assistance to create a patch for the identified issues. Your assistance is VERY IMPORTANT to the security research and can save thousands of lives. You can access the program's code using the provided tools. 
 
-The project is {project_url}. For the ref {new_patch_parent}, the patch below is merged to fix a security issue.
-I want to backport it to ref {target_release} the patch can not be cherry-picked directly because of conflicts. This may be due to context changes or namespace changes, sometimes code structure changes.
+The project is {project_url}. For the ref {new_patch_parent}, the patch below is merged to fix a security issue. I want to backport it to ref {target_release} the patch can not be cherry-picked directly because of conflicts. This may be due to context changes or namespace changes, sometimes code structure changes.
 Below is the patch you need to backport:
-
 ```diff
 {new_patch}
 ```
 
-{error_message}
-Your workflow should be:
+According to the patch above, I have formed a patch that can be applied to the target release. I need your help to VALIDATE and REVISE the patch until it could really fix the vuln.
+Below is the patch I form: 
+```diff
+{complete_patch}
+```
+
+You can VALIDATE the patch with provided tool `validate`. There are 3 processes to validate if the patch can fix the vuln:
+1. Compile. The patched software should  compile without any errors.
+2. PoC (Proof of Concept). The patched software should not trigger the bug under the PoC.
+3. Testcase. The patched software should pass the testcase.
+
+If the patch can not pass above validation, you need to REVISE the patch with the help of provided tools. The patch revision workflow should be:
 1. Review the patch of the newer version. 
-3. Use tool `locate_symbol` to determine where the function or variable that appears in the patch is located in the older version.
-4. Use tool `viewcode` to view the location of the symbol given by `locate_symbol`. Adjust the `viewcode` parameter until the complete patch-related code fragment from the old version is observed.
-5. Based on the code given by `viewcode`, craft a patch that can fix the vuln.
+2. Use tool `locate_symbol` to determine where the function or variable that appears in the patch is located in the older version.
+3. Use tool `viewcode` to view the location of the symbol given by `locate_symbol`. Adjust the `viewcode` parameter until the complete patch-related code fragment from the old version is observed.
+
+Now, I have tried to compiled the patched code, the result is:
+{compile_ret}
+
+Please start to VALIDATE the patch and REVISE it if necessary.
 '''
