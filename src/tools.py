@@ -182,11 +182,11 @@ def revise_patch(patch: str, project_path: str) -> tuple[str, bool]:
         return patch, False
 
 class Project:
-    def __init__(self, project_url:str, dir:str, patch_dataset_dir:str=''):
+    def __init__(self, project_url:str, dir:str, err_msg:str='no err_msg'):
         self.project_url = project_url
         self.dir = dir
-        self.patch_dataset_dir = patch_dataset_dir
         self.repo = Repo(dir)
+        self.err_msg = err_msg
         self.succeeded_patches = []
         self.round_succeeded = False
         self.all_hunks_applied_succeeded = False
@@ -320,47 +320,44 @@ class Project:
         except Exception as e:
             logger.info(f'Failed to apply Complete patch {f.name}')
             # TODO: 反馈具体哪一行不能apply, 让大模型直接修改整个patch
-            error_msg = ''
-            ret += 'The joined patch could not be applied successfully, please try to revise the patch with provided tools and the following error message during applying the patch:\n'
-            ret += error_msg
+            apply_result = ''
+            ret += f'The joined patch could not be applied successfully, please try to revise the patch with provided tools and the following error message during applying the patch: {apply_result}\n'
             self.repo.git.reset('--hard')
             return ret
         
         # compile the patch
         logger.info(f'Start compile the patched source code')
         build_process = subprocess.Popen(
-            ['/bin/bash', self.patch_dataset_dir + 'build.sh'],
+            ['/bin/bash', 'build.sh'],
             stdin=subprocess.DEVNULL,
-            # stdout=subprocess.PIPE,
+            stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=self.dir,
-            # env=env,
-            # shell=True,
-            # executable="/bin/bash",
         )
         try:
             stdout, stderr = build_process.communicate(timeout=60 * 60)
+            compile_result = stderr.decode('utf-8')  
         except subprocess.TimeoutExpired:
             build_process.kill()
-            ret += f'The compilation process of the patched source code is timeout.'
+            ret += f'The compilation process of the patched source code is timeout. '
             exit(1)
 
         if build_process.returncode != 0:
-            logger.info(f'\nCompilation failed\n{stderr}\n')
-            compile_result = stderr.decode('utf-8')   
+            logger.info(f'Compilation failed\n{compile_result}\n')
             ret += 'The source code could not be COMPILED successfully after applying the patch. '
-            ret += 'Next I\'ll give you the error message during compiling, and you should modify the error patch.'
+            ret += 'Next I\'ll give you the error message during compiling, and you should modify the error patch. '
             ret += f'Here is the error message:\n{compile_result}\n'
-            ret += 'Please revise the patch with above error message.'
+            ret += 'Please revise the patch with above error message. '
             ret += 'Or use tools `locate_symbol` and `viewcode` to re-check patch-related code snippet. '
             ret += 'Please DO NOT send the same patch to me, repeated patches will harm the lives of others.\n'
             self.repo.git.reset('--hard')
         else:
+            logger.info(f'Compilation succeeded\n')
             ret += 'The patched source code could be COMPILED successfully! I really thank you for your great efforts.\n'
             self.compile_succeeded = True
         return ret
     
-    def _run_testcase(self, ref: str, patch: str) -> str:
+    def _run_testcase(self, ref: str) -> str:
         """
         if a patch could be compiled successfully
         run the testcase, return error message if failed
@@ -371,33 +368,26 @@ class Project:
         ret = ''
         logger.info(f'Run testcase after compile')
 
-        # ret += 'The patched source code could pass TESTCASE! I really thank you for your great efforts.\n'
-        # self.testcase_succeeded = True
-        # return ret
-
         testcase_process = subprocess.Popen(
-            ['/bin/bash', self.patch_dataset_dir + 'test.sh'],
+            ['/bin/bash', 'test.sh'],
             stdin=subprocess.DEVNULL,
-            # stdout=subprocess.PIPE,
+            stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=self.dir,
-            # env=env,
-            # shell=True,
-            # executable="/bin/bash",
         )
 
         try:
             stdout, stderr = testcase_process.communicate(timeout=60 * 10)
+            testcase_result = stderr.decode('utf-8')
         except subprocess.TimeoutExpired:
             testcase_process.kill()
-            ret += f'The TESTCASE process of the patched source code is timeout.'
+            ret += f'The TESTCASE process of the patched source code is timeout. '
             exit(1)
 
         if testcase_process.returncode != 0:
-            logger.info(f'\Testcase failed\n{stderr}\n')
-            testcase_result = stderr.decode('utf-8')   
-            ret = 'The patched program could not pass the testcase.'
-            ret += 'Next I\'ll give you the error message during running the testcase, and you should modify the previous error patch according to this section.'
+            logger.info(f'Testcase failed\n{testcase_result}\n')
+            ret = 'The patched program could not pass the testcase. '
+            ret += 'Next I\'ll give you the error message during running the testcase, and you should modify the previous error patch according to this section. '
             ret += f'Here is the error message:\n{testcase_result}\n'
             ret += 'Please revise the patch with above error message. '
             ret += 'Or use tools `locate_symbol` and `viewcode` to re-check patch-related code snippet. '
@@ -405,11 +395,12 @@ class Project:
             self.compile_succeeded = False
             self.repo.git.reset('--hard')
         else:
+            logger.info(f'Testcase succeeded\n')
             ret += 'The patched source code could pass TESTCASE! I really thank you for your great efforts.\n'
             self.testcase_succeeded = True
         return ret
     
-    def _run_poc(self, error_message: str) -> str:
+    def _run_poc(self) -> str:
         """
         if a patch could be compiled successfully
         run the testcase, return error message if failed
@@ -417,14 +408,11 @@ class Project:
         logger.info(f'Run PoC after compile and run testcase')
 
         poc_process = subprocess.Popen(
-            ['/bin/bash', self.patch_dataset_dir + 'poc.sh'],
+            ['/bin/bash', 'poc.sh'],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=self.dir,
-            # env=env,
-            # shell=True,
-            # executable="/bin/bash",
         )
 
         try:
@@ -433,13 +421,14 @@ class Project:
             poc_result = stderr.decode('utf-8') 
         except subprocess.TimeoutExpired:
             poc_process.kill()
-            ret += f'The TESTCASE process of the patched source code is timeout.'
+            ret += f'The TESTCASE process of the patched source code is timeout. '
             exit(1)
 
-        if error_message in poc_result:
-            logger.info(f'returncode = {poc_process.returncode} \nPoC test FAIL, stderr: \n{poc_result}\n')
+        if self.err_msg in poc_result:
+            logger.info(f'PoC test FAIL, returncode = {poc_process.returncode}\n')
+            logger.info(f'stderr: {poc_result}\n')
             ret = 'Existing PoC could still trigger the bug, which means your patch fail to fix the bug. '
-            ret += 'Next I\'ll give you the error message during running the PoC, and you should modify the previous error patch according to this section.'
+            ret += 'Next I\'ll give you the error message during running the PoC, and you should modify the previous error patch according to this section. '
             ret += f'Here is the error message:\n{poc_result}\n'
             ret += 'Please revise the patch with above error message. '
             ret += 'Or use tools `locate_symbol` and `viewcode` to re-check patch-related code snippet. '
@@ -448,14 +437,32 @@ class Project:
             self.testcase_succeeded = False
             self.repo.git.reset('--hard')
         else:
-            logger.info(f'returncode = {poc_process.returncode} \nPoC test PASS, stdout: \n{poc_result}\n')
-            ret = 'Existing PoC could not trigger the bug, which means your patch successfully fix the bug! I really thank you for your great efforts.\n'
-            self.testcase_succeeded = True
+            logger.info(f'PoC test PASS, returncode = {poc_process.returncode}\n')
+            logger.info(f'stderr: {poc_result}\n')
+            logger.info(f'stdout: {stdout}\n')
+            ret = 'Existing PoC could NOT TRIGGER the bug, which means your patch successfully fix the bug! I really thank you for your great efforts.\n'
+            self.poc_succeeded = True
         return ret
     
 
     def get_tools(self):
         return creat_viewcode_tool(self), creat_locate_symbol_tool(self), create_validate_tool(self)
+
+    def not_wraped_validate(self, ref:str, patch:str) -> str:
+        '''
+        validate a patch on a specific ref of the target repository.
+        '''
+        if self.all_hunks_applied_succeeded:
+            ret = ''
+            if not self.compile_succeeded:
+                ret += self._compile_patch(ref, patch)
+            if self.compile_succeeded and not self.testcase_succeeded:
+                ret += self._run_testcase(ref)
+            if self.compile_succeeded and self.testcase_succeeded and not self.poc_succeeded:
+                    ret += self._run_poc()
+            return ret
+        else:
+            return self._apply_hunks(ref, patch)
 
 
 def creat_locate_symbol_tool(project:Project):
@@ -492,9 +499,9 @@ def create_validate_tool(project:Project):
             ret = ''
             ret += project._compile_patch(ref, patch)
             if project.compile_succeeded:
-                ret += project._run_testcase(ref, patch)
+                ret += project._run_testcase(patch)
                 if project.testcase_succeeded:
-                    ret += project._run_poc(ref, patch)
+                    ret += project._run_poc()
             return ret
         else:
             return project._apply_hunks(ref, patch)
