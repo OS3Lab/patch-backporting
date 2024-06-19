@@ -10,7 +10,7 @@ from langchain.globals import set_debug
 from langchain_core.callbacks import FileCallbackHandler
 from logger import logger
 from dotenv import load_dotenv
-import os
+import os, sys, re, time
 from tools import Project
 from prompt import SYSTEM_PROMPT, USER_PROMPT_HUNK, USER_PROMPT_PATCH
 import yaml
@@ -35,6 +35,12 @@ error_message = config['error_massage']
 
 if base_url is None:
     base_url = 'https://api.openai.com/v1'
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.append(parent_dir)
+import check_api_usage
+before_usage = check_api_usage.get_usage(api_key)
 
 llm = ChatOpenAI(temperature=0, model="gpt-4-turbo", api_key=api_key, 
                     openai_api_base=base_url,verbose=True)
@@ -71,6 +77,7 @@ for idx, pp in enumerate(pps):
         logger.info(f"Hunk {idx} can be applied without any conflicts")
         continue
     else:
+        similar_block = re.findall(r'section.\n(.*?)\nPlease', ret, re.DOTALL)[0]
         logger.info(f'Hunk {idx} can not be applied, using LLM to generate a fix')
         logger.info(f"Patch in the new version as below\n----------------------------------\n{pp}\n----------------------------------\n")
         agent_executor.invoke(
@@ -78,7 +85,8 @@ for idx, pp in enumerate(pps):
                 "project_url": project_url,
                 "new_patch_parent":new_patch_parent,
                 "new_patch":pp,
-                "target_release":target_release
+                "target_release":target_release,
+                "similar_block":similar_block
             },
             {"callbacks": [log_handler]}
         )
@@ -126,6 +134,12 @@ else:
     else:
         logger.info(f"Successfully backport the patch to target release {target_release}")
 
+
+time.sleep(10)
+after_usage = check_api_usage.get_usage(api_key)
+print(f"\nCurrent time: {after_usage['current_time']}")
+print(f"This patch total cost: ${(after_usage['total_cost'] - before_usage['total_cost']):.2f}")
+print(f"This patch total consume tokens: {(after_usage['total_consume_tokens'] - before_usage['total_consume_tokens'])/1000}(k)\n")
 
 # agent_executor.invoke(
 #     {

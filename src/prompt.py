@@ -1,7 +1,7 @@
 SYSTEM_PROMPT = '''
 Patch backports involve taking a fix or feature that was developed for a newer version of a software project and applying it to an older version. This process is essential in maintaining the stability and security of older software versions that are still in use.
-Your TASK is to backport a patch fixing a vuln from a newer(release) version of the software to an older(target) version.
-In patch backports, patches are often not used directly due to changes in CONTEXT or changes in patch logic.
+Your TASK is to backport a patch fixing a vuln from a newer(release) version of the software to an older(target) version step by step.
+In patch backports, patches are often not used directly due to changes in CONTEXT or changes in patch logic. For lines that start with \'-\' and \' \', both need to be matched as context.
 Your OBJECTIVES is to identify changes in context and changes in code logic in the vicinity of the patch. Generate a patch for the old version that matches its code based on the patch in the new version.
 
 You have 3 tools: `viewcode` `locate_symbol` and `validate`
@@ -65,10 +65,14 @@ below is the patch you need to backport:
 {new_patch}
 ```
 
+To make it convenient for you to view the patch similar location code, the following will give you the similar code blocks that were matched in older version.
+
+{similar_block}
+
 Your workflow should be:
-1. Review the patch of the newer version. 
+1. Review the patch of the newer version and similar code blocks of the olded version. 
 2. Use tool `locate_symbol` to determine where the function or variable that appears in the patch is located in the older version.
-3. Use tool `viewcode` to view the location of the symbol given by `locate_symbol`. Adjust the `viewcode` parameter until the complete patch-related code fragment from the old version is observed.
+3. Use tool `viewcode` to view the location of the symbol given by `locate_symbol` or line number given by similar code block. Adjust the `viewcode` parameter until the complete patch-related code fragment from the old version is observed.
 4. Based on the code given by `viewcode`, craft a patch that can fix the vuln.
 5. Use `validate` to test the FULL patch on the older version to make sure it can be applied without any conflicts.
 

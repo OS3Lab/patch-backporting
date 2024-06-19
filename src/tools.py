@@ -295,7 +295,7 @@ class Project:
             for i in range(startline, endline):
                 ret = ret + lines[i] + '\n'
             ret += '```\n'
-            ret += 'Please replace the error context in the error patch using the code in the code snippet above.(Including the difference between SPACE and INDENTATION.)\n'
+            ret += 'Please replace the error context in the error patch using the code in the code snippet above.(Including the difference between SPACE and INDENTATION.) At tbe beginning and end of the hunk, ONLY need 3 lines context. For lines that start with \'-\' and \' \', both need to be matched as context. You MUST never confuse \'->\' with \'\'s\'.\n'
             ret += 'Or use tools `locate_symbol` and `viewcode` to re-check patch-related code snippet.\n'
         self.repo.git.reset('--hard')
         return ret
@@ -421,8 +421,6 @@ def split_patch(patch):
         for line_no in range(len(lines)):
             if lines[line_no].startswith("--- a/"):
                 if last_line >= 0:
-                    print("_______________________________________ll_______")
-                    print(lines[line_no], last_line)
                     for x in split_block(lines[last_line:line_no - 2]):
                         yield message + x
                 if last_line == -1:
