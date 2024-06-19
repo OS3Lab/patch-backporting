@@ -42,7 +42,7 @@ sys.path.append(parent_dir)
 import check_api_usage
 before_usage = check_api_usage.get_usage(api_key)
 
-llm = ChatOpenAI(temperature=0, model="gpt-4-turbo", api_key=api_key, 
+llm = ChatOpenAI(temperature=0.5, model="gpt-4-turbo", api_key=api_key, 
                     openai_api_base=base_url,verbose=True)
 
 prompt = ChatPromptTemplate.from_messages(
@@ -83,10 +83,10 @@ tmp_patch = '''--- a/tools/tiffcp.c
  	tilebuf = limitMalloc(tilesize);
  	if (tilebuf == 0)
 '''
-# patch = project._get_patch(new_patch)
+patch = project._get_patch(new_patch)
 # patch = project._get_patch(patch_target)
-# pps = split_patch(patch)
-pps = [tmp_patch]
+pps = split_patch(patch)
+# pps = [tmp_patch]
 for idx, pp in enumerate(pps):
     project.round_succeeded = False
     ret = project._apply_hunks(target_release, pp)

@@ -103,19 +103,19 @@ def revise_patch(patch: str, project_path: str) -> tuple[str, bool]:
                 patched_content.append(line[1:])
         
         # find the context lines
-        match_pos = find_sub_list(file_content,orignal_content)
-        if len(match_pos) == 0:
-            logger.warning("No match found for the context")
-        if len(match_pos) > 1:
-            logger.warning("Multiple matches found for the context")
-        if len(match_pos) == 1:
-            start = match_pos[0]
-            if lines[-1][0] != ' ':
-                end = start + len(orignal_content)
-                if end < len(file_content):
-                    lines.append(' '+file_content[end])
-                    orignal_line_number += 1
-                    patched_line_number += 1
+        # match_pos = find_sub_list(file_content,orignal_content)
+        # if len(match_pos) == 0:
+        #     logger.warning("No match found for the context")
+        # if len(match_pos) > 1:
+        #     logger.warning("Multiple matches found for the context")
+        # if len(match_pos) == 1:
+        #     start = match_pos[0]
+        #     if lines[-1][0] != ' ':
+        #         end = start + len(orignal_content)
+        #         if end < len(file_content):
+        #             lines.append(' '+file_content[end])
+        #             orignal_line_number += 1
+        #             patched_line_number += 1
 
         hunk = "\n".join(lines[1:])
 
@@ -234,7 +234,12 @@ class Project:
             return "Error commit id, please check if the commit id is correct."
     
     def _locate_symbol(self, ref:str, symbol:str) -> str:
-        self._checkout(ref)
+        try: 
+            self._checkout(ref)
+        except:
+            ret = f"Oops, it looks like you give a error commit id.\n"
+            ret += "Please check commit id and retry to check the patch.\n"
+            return ret
         self._prepare()
         if symbol in self.symbol_map:
             return self.symbol_map[symbol]
@@ -262,7 +267,12 @@ class Project:
     
     def _apply_hunks(self, ref:str, patch:str) -> str:
         # print('test_patch',ref,patch)
-        self._checkout(ref)
+        try: 
+            self._checkout(ref)
+        except:
+            ret = f"Oops, it looks like you give a error commit id.\n"
+            ret += "Please check commit id and retry to check the patch.\n"
+            return ret
         self.repo.git.reset('--hard')
         revised_patch, fixed = revise_patch(patch, self.dir)
         with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
