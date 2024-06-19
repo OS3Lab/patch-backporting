@@ -416,10 +416,6 @@ class Project:
         """
         logger.info(f'Run PoC after compile and run testcase')
 
-        # ret = 'Existing PoC could not trigger the bug, which means your patch successfully fix the bug! I really thank you for your great efforts.\n'
-        # self.testcase_succeeded = True
-        # return ret
-
         poc_process = subprocess.Popen(
             ['/bin/bash', self.patch_dataset_dir + 'poc.sh'],
             stdin=subprocess.DEVNULL,
@@ -433,15 +429,15 @@ class Project:
 
         try:
             stdout, stderr = poc_process.communicate(timeout=60 * 10)
+            # FIXME: why stderr, not stdout
             poc_result = stderr.decode('utf-8') 
         except subprocess.TimeoutExpired:
             poc_process.kill()
             ret += f'The TESTCASE process of the patched source code is timeout.'
             exit(1)
 
-        # FIXME: why stderr, not stdout
         if error_message in poc_result:
-            logger.info(f'returncode = {poc_process.returncode} \nPoC test failed, stderr: \n{stderr}\n')
+            logger.info(f'returncode = {poc_process.returncode} \nPoC test FAIL, stderr: \n{poc_result}\n')
             ret = 'Existing PoC could still trigger the bug, which means your patch fail to fix the bug. '
             ret += 'Next I\'ll give you the error message during running the PoC, and you should modify the previous error patch according to this section.'
             ret += f'Here is the error message:\n{poc_result}\n'
@@ -452,6 +448,7 @@ class Project:
             self.testcase_succeeded = False
             self.repo.git.reset('--hard')
         else:
+            logger.info(f'returncode = {poc_process.returncode} \nPoC test PASS, stdout: \n{poc_result}\n')
             ret = 'Existing PoC could not trigger the bug, which means your patch successfully fix the bug! I really thank you for your great efforts.\n'
             self.testcase_succeeded = True
         return ret

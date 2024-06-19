@@ -121,6 +121,14 @@ complete_patch = '\n'.join(project.succeeded_patches)
 print(complete_patch)
 
 
+# create symbolic link for each patch dataset file
+for file in os.listdir(patch_dataset_dir):
+    if os.path.exists(f"{project_dir}{file}"):
+        os.remove(f"{project_dir}{file}")
+    os.symlink(f"{patch_dataset_dir}{file}", f"{project_dir}{file}")
+    logger.info(f"Create symbolic link {project_dir}{file}")
+
+
 validate_ret = ''
 validate_ret += project._compile_patch(target_release, complete_patch)
 if project.compile_succeeded:
