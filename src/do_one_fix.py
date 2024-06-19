@@ -89,7 +89,7 @@ tmp_patch = '''--- a/tools/tiffcp.c
 pps = [tmp_patch]
 for idx, pp in enumerate(pps):
     project.round_succeeded = False
-    project._apply_hunks(target_release, pp)
+    ret = project._apply_hunks(target_release, pp)
     if project.round_succeeded:
         logger.info(f"Hunk {idx} can be applied without any conflicts")
         continue
@@ -147,6 +147,16 @@ if project.compile_succeeded:
 #     exit(0)
 
 print(validate_ret)
+
+for patch in project.succeeded_patches:
+    print(patch)
+
+time.sleep(10)
+after_usage = check_api_usage.get_usage(api_key)
+print(f"\nCurrent time: {after_usage['current_time']}")
+print(f"This patch total cost: ${(after_usage['total_cost'] - before_usage['total_cost']):.2f}")
+print(f"This patch total consume tokens: {(after_usage['total_consume_tokens'] - before_usage['total_consume_tokens'])/1000}(k)\n")
+
 exit(1)
 
 prompt = ChatPromptTemplate.from_messages(
