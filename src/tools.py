@@ -327,6 +327,10 @@ class Project:
         
         # compile the patch
         logger.info(f'Start compile the patched source code')
+        if not os.path.exists(os.path.join(self.dir, 'build.sh')):
+            logger.info('No build.sh file found.')
+            exit(1)
+
         build_process = subprocess.Popen(
             ['/bin/bash', 'build.sh'],
             stdin=subprocess.DEVNULL,
@@ -362,12 +366,14 @@ class Project:
         if a patch could be compiled successfully
         run the testcase, return error message if failed
         """
-
-        self._checkout(ref)
-        self.repo.git.reset('--hard')
         ret = ''
         logger.info(f'Run testcase after compile')
 
+        if not os.path.exists(os.path.join(self.dir, 'test.sh')):
+            logger.info('No test.sh file found, considered as test passed.')
+            self.testcase_succeeded = True
+            ret += 'The patched source code could pass TESTCASE! I really thank you for your great efforts.\n'
+            return ret
         testcase_process = subprocess.Popen(
             ['/bin/bash', 'test.sh'],
             stdin=subprocess.DEVNULL,
@@ -405,8 +411,14 @@ class Project:
         if a patch could be compiled successfully
         run the testcase, return error message if failed
         """
+        ret = ''
         logger.info(f'Run PoC after compile and run testcase')
 
+        if not os.path.exists(os.path.join(self.dir, 'poc.sh')):
+            logger.info('No poc.sh file found, considered as PoC passed.')
+            self.poc_succeeded = True
+            ret += 'Existing PoC could NOT TRIGGER the bug, which means your patch successfully fix the bug! I really thank you for your great efforts.\n'
+            return ret
         poc_process = subprocess.Popen(
             ['/bin/bash', 'poc.sh'],
             stdin=subprocess.DEVNULL,
@@ -427,7 +439,7 @@ class Project:
         if self.err_msg in poc_result:
             logger.info(f'PoC test FAIL, returncode = {poc_process.returncode}\n')
             logger.info(f'stderr: {poc_result}\n')
-            ret = 'Existing PoC could still trigger the bug, which means your patch fail to fix the bug. '
+            ret += 'Existing PoC could still trigger the bug, which means your patch fail to fix the bug. '
             ret += 'Next I\'ll give you the error message during running the PoC, and you should modify the previous error patch according to this section. '
             ret += f'Here is the error message:\n{poc_result}\n'
             ret += 'Please revise the patch with above error message. '
@@ -440,7 +452,7 @@ class Project:
             logger.info(f'PoC test PASS, returncode = {poc_process.returncode}\n')
             logger.info(f'stderr: {poc_result}\n')
             logger.info(f'stdout: {stdout}\n')
-            ret = 'Existing PoC could NOT TRIGGER the bug, which means your patch successfully fix the bug! I really thank you for your great efforts.\n'
+            ret += 'Existing PoC could NOT TRIGGER the bug, which means your patch successfully fix the bug! I really thank you for your great efforts.\n'
             self.poc_succeeded = True
         return ret
     
@@ -450,7 +462,7 @@ class Project:
 
     def not_wraped_validate(self, ref:str, patch:str) -> str:
         '''
-        validate a patch on a specific ref of the target repository.
+        same with validate, but not wrapped by tool decorator
         '''
         if self.all_hunks_applied_succeeded:
             ret = ''

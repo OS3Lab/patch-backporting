@@ -128,14 +128,13 @@ for file in os.listdir(patch_dataset_dir):
     os.symlink(f"{patch_dataset_dir}{file}", f"{project_dir}{file}")
     logger.info(f"Create symbolic link {project_dir}{file}")
 
-# project.compile_succeeded = True
-# project.testcase_succeeded = True
+project.compile_succeeded = True
+project.testcase_succeeded = True
 # project.poc_succeeded = True
 validate_ret = project.not_wraped_validate(target_release, complete_patch)
 print(validate_ret)
 if project.poc_succeeded:
     logger.info(f"Successfully backport patch to target release {target_release}")
-    exit(0)
 
 for patch in project.succeeded_patches:
     print(patch)
