@@ -268,6 +268,7 @@ class Project:
     def _apply_hunks(self, ref:str, patch:str) -> str:
         # print('test_patch',ref,patch)
         try: 
+            self.repo.git.reset('--hard')
             self._checkout(ref)
         except:
             ret = f"Oops, it looks like you give a error commit id.\n"
