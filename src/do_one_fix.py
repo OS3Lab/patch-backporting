@@ -30,8 +30,11 @@ project_url = config['project_url']
 new_patch = config['new_patch']
 new_patch_parent = config['new_patch_parent']
 target_release = config['target_release']
-sanitizer = config['sanitizer']
-error_message = config['error_massage']
+try:
+    sanitizer = config['sanitizer']
+    error_message = config['error_massage']
+except:
+    logger.warning("Dataset without error info\n")
 
 if base_url is None:
     base_url = 'https://api.openai.com/v1'
@@ -42,7 +45,7 @@ sys.path.append(parent_dir)
 import check_api_usage
 before_usage = check_api_usage.get_usage(api_key)
 
-llm = ChatOpenAI(temperature=0.5, model="gpt-4-turbo", api_key=api_key, 
+llm = ChatOpenAI(temperature=0, model="gpt-4-turbo", api_key=api_key, 
                     openai_api_base=base_url,verbose=True)
 
 prompt = ChatPromptTemplate.from_messages(
