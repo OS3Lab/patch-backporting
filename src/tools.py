@@ -355,7 +355,7 @@ class Project:
         except subprocess.TimeoutExpired:
             build_process.kill()
             ret += f'The compilation process of the patched source code is timeout. '
-            exit(1)
+            return ret
 
         if build_process.returncode != 0:
             logger.info(f'Compilation failed\n{compile_result}\n')
@@ -394,12 +394,12 @@ class Project:
         )
 
         try:
-            stdout, stderr = testcase_process.communicate(timeout=60 * 10)
+            stdout, stderr = testcase_process.communicate(timeout=60 * 30)
             testcase_result = stderr.decode('utf-8')
         except subprocess.TimeoutExpired:
             testcase_process.kill()
             ret += f'The TESTCASE process of the patched source code is timeout. '
-            exit(1)
+            return ret
 
         if testcase_process.returncode != 0:
             logger.info(f'Testcase failed\n{testcase_result}\n')
@@ -445,7 +445,7 @@ class Project:
         except subprocess.TimeoutExpired:
             poc_process.kill()
             ret += f'The TESTCASE process of the patched source code is timeout. '
-            exit(1)
+            return ret
 
         if self.err_msg in poc_result:
             logger.info(f'PoC test FAIL, returncode = {poc_process.returncode}\n')
@@ -482,7 +482,7 @@ class Project:
             if self.compile_succeeded and not self.testcase_succeeded:
                 ret += self._run_testcase(ref)
             if self.compile_succeeded and self.testcase_succeeded and not self.poc_succeeded:
-                    ret += self._run_poc()
+                ret += self._run_poc()
             return ret
         else:
             return self._apply_hunks(ref, patch)
