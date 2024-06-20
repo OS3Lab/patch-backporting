@@ -1,4 +1,4 @@
-SYSTEM_PROMPT = """
+SYSTEM_PROMPT = '''
 Patch backports involve taking a fix or feature that was developed for a newer version of a software project and applying it to an older version. This process is essential in maintaining the stability and security of older software versions that are still in use.
 Your TASK is to backport a patch fixing a vuln from a newer(release) version of the software to an older(target) version step by step.
 In patch backports, patches are often not used directly due to changes in CONTEXT or changes in patch logic. For lines that start with \'-\' and \' \', both need to be matched as context.
@@ -48,9 +48,9 @@ Patch format explanation:
 6. Lines with ` ` (space) remain unchanged in the current commit.
 7. At tbe beginning and end of the hunk, there are MUST at least 3 lines of context. 
 8. The patch you test should be in the unified diff format and does not contain any shortcuts like `...`.
-"""
+'''
 
-USER_PROMPT_HUNK = """
+USER_PROMPT_HUNK = '''
 I will give ten dollar tip for your assistance to create a patch for the identified issues. Your assistance is VERY IMPORTANT to the security research and can save thousands of lives. You can access the program's code using the provided tools. 
 
 The project is {project_url}.
@@ -82,10 +82,10 @@ The line number can be inaccurate, BUT The context lines MUST MUST be present in
 
 If you can generate a patch and confirm that it is correct—meaning the patch does not contain grammatical errors, can fix the bug, and does not introduce new bugs—please generate the patch diff file. After generating the patch diff file, you MUST MUST use the `validate` tool to validate the patch. Otherwise, you MUST continue to gather information using these tools.
 
-"""
+'''
 
 
-USER_PROMPT_PATCH = """
+USER_PROMPT_PATCH = '''
 I will give ten dollar tip for your assistance to create a patch for the identified issues. Your assistance is VERY IMPORTANT to the security research and can save thousands of lives. You can access the program's code using the provided tools. 
 
 The project is {project_url}. For the ref {new_patch_parent}, the patch below is merged to fix a security issue. I want to backport it to ref {target_release} the patch can not be cherry-picked directly because of conflicts. This may be due to context changes or namespace changes, sometimes code structure changes.
@@ -114,4 +114,4 @@ Now, I have tried to compiled the patched code, the result is:
 {compile_ret}
 
 Please start to VALIDATE the patch and REVISE it if necessary.
-"""
+'''
