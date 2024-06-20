@@ -1,9 +1,9 @@
 from tools import Project, revise_patch
 
-openssl = Project('https://github.com/openssl/openssl','dataset/openssl/openssl')
+openssl = Project("https://github.com/openssl/openssl", "dataset/openssl/openssl")
 
 
-patch1 = '''--- a/crypto/pem/pem_lib.c
+patch1 = """--- a/crypto/pem/pem_lib.c
 +++ b/crypto/pem/pem_lib.c
 @@ -940,6 +940,8 @@ int PEM_read_bio_ex(BIO *bp, char **name_out, char **header,
      if (*header == NULL || *data == NULL) {
@@ -15,7 +15,7 @@ patch1 = '''--- a/crypto/pem/pem_lib.c
      }
      BIO_read(headerB, *header, headerlen);
 
-'''
+"""
 
 
 # openssl._prepare()
@@ -24,7 +24,7 @@ patch1 = '''--- a/crypto/pem/pem_lib.c
 
 # print(openssl._test_patch('43d8f88511991533f53680a751e9326999a6a31f', patch1))
 
-patch2 = '''diff --git a/libavcodec/rpzaenc.c b/libavcodec/rpzaenc.c
+patch2 = """diff --git a/libavcodec/rpzaenc.c b/libavcodec/rpzaenc.c
 index d710eb4f825ca..4ced9523e2077 100644
 --- a/libavcodec/rpzaenc.c
 +++ b/libavcodec/rpzaenc.c
@@ -93,9 +93,9 @@ index d710eb4f825ca..4ced9523e2077 100644
 +                    for (int x = 0; x < 4; x++)
 +                        put_bits(&s->pb, 16, 0);
 +                }
-+'''
++"""
 
-patch3='''diff --git a/libavfilter/vf_yadif.c b/libavfilter/vf_yadif.c
+patch3 = """diff --git a/libavfilter/vf_yadif.c b/libavfilter/vf_yadif.c
 index 91cc79ecc3..b0d9fbaf1f 100644
 --- a/libavfilter/vf_yadif.c
 +++ b/libavfilter/vf_yadif.c
@@ -149,11 +149,11 @@ index 91cc79ecc3..b0d9fbaf1f 100644
 +    FILTER(offset, w - 3, 1)
 +    offset = FFMAX(offset, w - 3);
 +    FILTER(offset, w, 0)
- }'''
+ }"""
 
-ffmpeg = Project('https://github.com/ffmpeg/ffmpeg','dataset/ffmpeg/ffmpeg')
+ffmpeg = Project("https://github.com/ffmpeg/ffmpeg", "dataset/ffmpeg/ffmpeg")
 
 ffmpeg._prepare()
-ffmpeg._checkout('13c13109759090b7f7182480d075e13b36ed8edd')
+ffmpeg._checkout("13c13109759090b7f7182480d075e13b36ed8edd")
 fixed_patch, fixed = revise_patch(patch3, ffmpeg.dir)
 print(fixed_patch)
