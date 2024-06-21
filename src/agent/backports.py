@@ -12,7 +12,7 @@ from tools.project import Project
 from tools.utils import split_patch
 
 
-def initial_agent(project: Project, api_key: str):
+def initial_agent(project: Project, api_key: str, debug_mode: bool):
     base_url = "https://api.openai.com/v1"
 
     llm = ChatOpenAI(
@@ -34,7 +34,7 @@ def initial_agent(project: Project, api_key: str):
     tools = [viewcode, locate_symbol, validate]
     agent = create_tool_calling_agent(llm, tools, prompt)
     agent_executor = AgentExecutor(
-        agent=agent, tools=tools, verbose=True, max_iterations=30
+        agent=agent, tools=tools, verbose=debug_mode, max_iterations=30
     )
     return agent_executor
 

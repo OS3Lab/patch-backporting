@@ -61,9 +61,12 @@ def main():
     parser.add_argument(
         "-c", "--config", type=str, required=True, help="CVE config yml"
     )
-    args = parser.parse_args()
+    parser.add_argument("-d", "--debug", action="store_true", help="enable debug mode")
 
+    args = parser.parse_args()
+    debug_mode = args.debug
     config_file = args.config
+
     data = load_yml(config_file)
 
     data.project_dir = os.path.expanduser(
@@ -85,7 +88,7 @@ def main():
         exit(1)
 
     project = Project(data.project_url, data.project_dir, data.patch_dataset_dir)
-    agent_executor = initial_agent(project, data.openai_key)
+    agent_executor = initial_agent(project, data.openai_key, debug_mode)
 
     before_usage = get_usage(data.openai_key)
     do_backport(agent_executor, project, data)
