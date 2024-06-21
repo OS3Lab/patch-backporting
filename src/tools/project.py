@@ -7,7 +7,7 @@ from git import Repo
 from langchain_core.tools import tool
 
 import tools.utils as utils
-from logger import logger
+from tools.logger import logger
 
 
 class Project:
@@ -190,7 +190,7 @@ class Project:
             ret += "Please DO NOT send the same patch to me, repeated patches will harm the lives of others.\n"
             self.repo.git.reset("--hard")
         else:
-            logger.info(f"Compilation succeeded\n")
+            logger.info(f"Compilation succeeded")
             ret += "The patched source code could be COMPILED successfully! I really thank you for your great efforts.\n"
             self.compile_succeeded = True
         return ret
@@ -225,7 +225,7 @@ class Project:
             return ret
 
         if testcase_process.returncode != 0:
-            logger.info(f"Testcase failed\n{testcase_result}\n")
+            logger.info(f"Testcase failed\n{testcase_result}")
             ret = "The patched program could not pass the testcase. "
             ret += "Next I'll give you the error message during running the testcase, and you should modify the previous error patch according to this section. "
             ret += f"Here is the error message:\n{testcase_result}\n"
@@ -235,7 +235,7 @@ class Project:
             self.compile_succeeded = False
             self.repo.git.reset("--hard")
         else:
-            logger.info(f"Testcase succeeded\n")
+            logger.info(f"Testcase succeeded")
             ret += "The patched source code could pass TESTCASE! I really thank you for your great efforts.\n"
             self.testcase_succeeded = True
         return ret
@@ -271,8 +271,8 @@ class Project:
             return ret
 
         if self.err_msg in poc_result:
-            logger.info(f"PoC test FAIL, returncode = {poc_process.returncode}\n")
-            logger.info(f"stderr: {poc_result}\n")
+            logger.info(f"PoC test FAIL, returncode = {poc_process.returncode}")
+            logger.info(f"stderr: {poc_result}")
             ret += "Existing PoC could still trigger the bug, which means your patch fail to fix the bug. "
             ret += "Next I'll give you the error message during running the PoC, and you should modify the previous error patch according to this section. "
             ret += f"Here is the error message:\n{poc_result}\n"
@@ -283,9 +283,7 @@ class Project:
             self.testcase_succeeded = False
             self.repo.git.reset("--hard")
         else:
-            logger.info(f"PoC test PASS, returncode = {poc_process.returncode}\n")
-            logger.info(f"stderr: {poc_result}\n")
-            logger.info(f"stdout: {stdout}\n")
+            logger.info(f"PoC test PASS, returncode = {poc_process.returncode}")
             ret += "Existing PoC could NOT TRIGGER the bug, which means your patch successfully fix the bug! I really thank you for your great efforts.\n"
             self.poc_succeeded = True
         return ret

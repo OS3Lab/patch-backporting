@@ -5,7 +5,7 @@ from typing import List
 
 import Levenshtein
 
-from logger import logger
+from tools.logger import logger
 
 
 def find_most_similar_block(
