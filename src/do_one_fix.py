@@ -1,12 +1,13 @@
 import argparse
 import os
 from types import SimpleNamespace
+
 import yaml
 
+from agent.backports import do_backport, initial_agent
 from check.usage import get_usage
 from tools.logger import logger
 from tools.project import Project
-from agent.backports import initial_agent, do_backport
 
 
 def load_yml(file_path: str):
@@ -50,6 +51,7 @@ def load_yml(file_path: str):
         )
 
     return data
+
 
 def main():
     parser = argparse.ArgumentParser(

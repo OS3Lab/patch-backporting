@@ -6,10 +6,11 @@ from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.callbacks import FileCallbackHandler
 from langchain_openai import ChatOpenAI
 
-from tools.logger import logger
 from agent.prompt import SYSTEM_PROMPT, USER_PROMPT_HUNK, USER_PROMPT_PATCH
+from tools.logger import logger
 from tools.project import Project
 from tools.utils import split_patch
+
 
 def initial_agent(project: Project, api_key: str):
     base_url = "https://api.openai.com/v1"
