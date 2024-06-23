@@ -33,6 +33,12 @@ class Project:
             return "Error commit id, please check if the commit id is correct."
 
     def _prepare(self):
+        """
+        Prepares the project by generating a symbol map using ctags.
+
+        Raises:
+            subprocess.CalledProcessError: If the ctags command fails.
+        """
         ctags = subprocess.run(
             ["ctags", "--excmd=number", "-R", "."],
             stdout=subprocess.PIPE,
@@ -58,6 +64,16 @@ class Project:
     def _viewcode(self, ref: str, path: str, startline: int, endline: int) -> str:
         """
         View a file from a specific ref of the target repository. Lines between startline and endline are shown.
+
+        Args:
+            ref (str): The specific ref of the target repository.
+            path (str): The path of the file to view.
+            startline (int): The starting line number to display.
+            endline (int): The ending line number to display.
+
+        Returns:
+            str: The content of the file between the specified startline and endline.
+                 If the file doesn't exist in the commit, a message indicating that is returned.
         """
         try:
             file = self.repo.tree(ref) / path
@@ -74,6 +90,13 @@ class Project:
     def _locate_symbol(self, ref: str, symbol: str) -> str:
         """
         Locate a symbol in a specific ref of the target repository.
+
+        Args:
+            ref (str): The reference of the target repository.
+            symbol (str): The symbol to locate.
+
+        Returns:
+            str: The location of the symbol in the specified ref, or None if the symbol is not found.
         """
         try:
             self._checkout(ref)
@@ -89,7 +112,18 @@ class Project:
 
     def _apply_hunk(self, ref: str, patch: str) -> str:
         """
-        apply a hunk to a specific ref of the target repository.
+        Apply a hunk to a specific ref of the target repository.
+
+        Args:
+            ref (str): The reference of the target repository.
+            patch (str): The patch to be applied.
+
+        Returns:
+            str: A string indicating the result of the patch application.
+
+        Raises:
+            Exception: If the patch fails to apply.
+
         """
         try:
             self.repo.git.reset("--hard")
@@ -139,8 +173,18 @@ class Project:
 
     def _compile_patch(self, ref: str, complete_patch: str) -> str:
         """
-        if all hunks could be applied successfully
-        compile the patch, return error message if failed
+        If all hunks could be applied successfully, compiles the patched source code after applying the joined patch.
+
+        Args:
+            ref (str): The reference to checkout before applying the patch.
+            complete_patch (str): The complete patch to be applied.
+
+        Returns:
+            str: A message indicating the result of the compilation process.
+
+        Raises:
+            subprocess.TimeoutExpired: If the compilation process times out.
+
         """
         self._checkout(ref)
         self.repo.git.reset("--hard")
@@ -197,8 +241,10 @@ class Project:
 
     def _run_testcase(self) -> str:
         """
-        if a patch could be compiled successfully
-        run the testcase, return error message if failed
+        Runs the testcase after compiling a patch.
+
+        Returns:
+            str: A message indicating the result of the testcase process.
         """
         ret = ""
         logger.info(f"Run testcase after compile")
@@ -242,8 +288,10 @@ class Project:
 
     def _run_poc(self) -> str:
         """
-        if a patch could be compiled successfully
-        run the testcase, return error message if failed
+        Runs the Proof of Concept (PoC) after running the testcase.
+
+        Returns:
+            str: A message indicating the result of the PoC process.
         """
         ret = ""
         logger.info(f"Run PoC after compile and run testcase")
@@ -290,7 +338,15 @@ class Project:
 
     def _validate(self, ref: str, patch: str) -> str:
         """
-        use _compile_patch, _run_testcase and _run_poc to validate a patch
+        Validates a patch by using the `_compile_patch`, `_run_testcase`, and `_run_poc` methods.
+
+        Args:
+            ref (str): The reference string.
+            patch (str): The patch string.
+
+        Returns:
+            str: The validation result.
+
         """
         if self.all_hunks_applied_succeeded:
             ret = ""

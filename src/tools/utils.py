@@ -11,6 +11,18 @@ from tools.logger import logger
 def find_most_similar_block(
     code_snippet: str, lines: List[str], snippet_num: int
 ) -> int:
+    """
+    Finds the most similar block of code in a list of lines to a given code snippet.
+
+    Args:
+        code_snippet (str): The code snippet to compare against.
+        lines (List[str]): The list of lines containing code blocks.
+        snippet_num (int): The number of lines in the code snippet.
+
+    Returns:
+        int: The index of the start line of the most similar block.
+
+    """
     min_distance = float("inf")
     best_start_index = -1
 
@@ -26,6 +38,15 @@ def find_most_similar_block(
 
 
 def process_string(input_string: str) -> tuple[str, int]:
+    """
+    Process the input string by removing certain lines and returning the processed string and the count of processed lines.
+
+    Args:
+        input_string (str): The input string to be processed.
+
+    Returns:
+        tuple[str, int]: A tuple containing the processed string and the count of processed lines.
+    """
     lines = input_string.split("\n")
     processed_lines = []
 
@@ -46,8 +67,17 @@ def process_string(input_string: str) -> tuple[str, int]:
 
 
 def find_sub_list(lst, neddle):
+    """
+    Find all occurrences of a sublist in a given list using the Knuth-Morris-Pratt (KMP) algorithm.
+
+    Args:
+        lst (list): The list to search in.
+        neddle (list): The sublist to find.
+
+    Returns:
+        list: A list of indices where the sublist is found in the main list.
+    """
     match_pos = []
-    # KMP algorithm
 
     def get_next(p):
         next = [0] * len(p)
@@ -171,65 +201,19 @@ def revise_patch(patch: str, project_path: str) -> tuple[str, bool]:
 
 
 def split_patch(patch):
-    def split_block(lines: list[str]):
-        file_path_line_a = lines[0]
-        file_path_line_b = lines[1]
-        last_line = -1
-        for line_no in range(2, len(lines)):
-            if lines[line_no].startswith("@@"):
-                if last_line != -1:
-                    content = (
-                        file_path_line_a
-                        + "\n"
-                        + file_path_line_b
-                        + "\n"
-                        + "\n".join(lines[last_line:line_no])
-                    )
-                    yield content
-                last_line = line_no
-        if last_line != -1:
-            content = (
-                file_path_line_a
-                + "\n"
-                + file_path_line_b
-                + "\n"
-                + "\n".join(lines[last_line:])
-            )
-            yield content
+    """
+    Split a patch into individual blocks.
 
-    try:
-        lines = patch.splitlines()
-        message = ""
-        last_line = -1
-        fixed = False
-        for line_no in range(len(lines)):
-            if lines[line_no].startswith("--- a/"):
-                if last_line >= 0:
-                    for x in split_block(lines[last_line : line_no - 2]):
-                        yield message + x
-                if last_line == -1:
-                    message = "\n".join(lines[: line_no - 2])
-                if (
-                    lines[line_no].endswith(".rst")
-                    or lines[line_no].endswith(".yaml")
-                    or lines[line_no].endswith(".yml")
-                    or lines[line_no].endswith(".md")
-                ):
-                    last_line = -2
-                else:
-                    last_line = line_no
-        if last_line >= 0:
-            for x in split_block(lines[last_line:]):
-                yield message + x
+    Args:
+        patch (str): The patch to be split.
 
-    except Exception as e:
-        logger.warning("Failed to split patch")
-        logger.warning(e)
-        print("".join(traceback.TracebackException.from_exception(e).format()))
-        return None
+    Yields:
+        str: Each individual block of the patch.
 
+    Returns:
+        None
+    """
 
-def split_patch(patch):
     def split_block(lines: list[str]):
         file_path_line_a = lines[0]
         file_path_line_b = lines[1]

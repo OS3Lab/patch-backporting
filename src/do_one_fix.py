@@ -11,6 +11,15 @@ from tools.project import Project
 
 
 def load_yml(file_path: str):
+    """
+    Load YAML configuration from a file and return the data as a SimpleNamespace object.
+
+    Args:
+        file_path (str): The path to the YAML file.
+
+    Returns:
+        data (SimpleNamespace): The configuration data stored in a SimpleNamespace object.
+    """
     with open(file_path, "r") as file:
         config = yaml.safe_load(file)
 
