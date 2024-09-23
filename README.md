@@ -1,5 +1,13 @@
 # patch-backporting
 
+## Setup
+
+```shell
+curl -sSL https://pdm-project.org/install-pdm.py | python3 -
+pdm install
+source .venv/bin/activate
+```
+
 ## Usage
 
 ```shell
