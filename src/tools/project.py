@@ -28,6 +28,7 @@ class Project:
         self.compile_succeeded = False
         self.testcase_succeeded = False
         self.poc_succeeded = False
+        self.symbol_map = {}
 
     def _checkout(self, ref: str) -> None:
         self.repo.git.reset("--hard")
@@ -39,7 +40,7 @@ class Project:
         except:
             return "Error commit id, please check if the commit id is correct."
 
-    def _prepare(self) -> None:
+    def _prepare(self, ref: str) -> None:
         """
         Prepares the project by generating a symbol map using ctags.
 
@@ -54,7 +55,8 @@ class Project:
             stderr=subprocess.DEVNULL,
         )
         ctags.check_returncode()
-        self.symbol_map = {}
+
+        self.symbol_map[ref] = {}
         with open(os.path.join(self.dir, "tags"), "rb") as f:
             for line in f.readlines():
                 if text := line.decode("utf-8", errors="ignore"):
@@ -63,9 +65,9 @@ class Project:
                     try:
                         symbol, file, lineno = text.strip().split(';"')[0].split("\t")
                         lineno = int(lineno)
-                        if symbol not in self.symbol_map:
-                            self.symbol_map[symbol] = []
-                        self.symbol_map[symbol].append((file, lineno))
+                        if symbol not in self.symbol_map[ref]:
+                            self.symbol_map[ref][symbol] = []
+                        self.symbol_map[ref][symbol].append((file, lineno))
                     except:
                         continue
 
@@ -107,10 +109,12 @@ class Project:
             List[Tuple[str, int]] | None: File path and code lines.
         """
         # XXX: Analyzing ctags file everytime locate symbol is time-consuming.
-        self._checkout(ref)
-        self._prepare()
-        if symbol in self.symbol_map:
-            return self.symbol_map[symbol]
+        if ref not in self.symbol_map:
+            self._checkout(ref)
+            self._prepare(ref)
+
+        if symbol in self.symbol_map[ref]:
+            return self.symbol_map[ref][symbol]
         else:
             return None
 
