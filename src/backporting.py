@@ -40,6 +40,7 @@ def load_yml(file_path: str):
     data.project = config.get("project")
     data.project_url = config.get("project_url")
     data.project_dir = config.get("project_dir")
+    data.source_dir = config.get("source_dir")
     data.patch_dataset_dir = config.get("patch_dataset_dir")
     data.openai_key = config.get("openai_key")
     data.tag = config.get("tag")
@@ -74,6 +75,9 @@ def load_yml(file_path: str):
     data.project_dir = os.path.expanduser(
         data.project_dir if data.project_dir.endswith("/") else data.project_dir + "/"
     )
+    data.source_dir = os.path.expanduser(
+        data.source_dir if data.source_dir.endswith("/") else data.source_dir + "/"
+    )
     data.patch_dataset_dir = os.path.expanduser(
         data.patch_dataset_dir
         if data.patch_dataset_dir.endswith("/")
@@ -82,6 +86,9 @@ def load_yml(file_path: str):
     if not os.path.isdir(data.project_dir):
         logger.error(f"Project directory does not exist: {data.project_dir}")
         exit(1)
+    if not os.path.isdir(data.source_dir):
+        logger.error(f"Project directory does not exist: {data.source_dir}")
+        exit(1)
     if not os.path.isdir(data.patch_dataset_dir):
         logger.error(
             f"Patch dataset directory does not exist: {data.patch_dataset_dir}"
@@ -89,9 +96,9 @@ def load_yml(file_path: str):
         exit(1)
 
     if (
-        not is_commit_valid(data.new_patch, data.project_dir)
+        not is_commit_valid(data.new_patch, data.source_dir)
         or not is_commit_valid(data.target_release, data.project_dir)
-        or not is_commit_valid(data.new_patch_parent, data.project_dir)
+        or not is_commit_valid(data.new_patch_parent, data.source_dir)
     ):
         exit(1)
 
@@ -125,7 +132,9 @@ def main():
     add_file_handler(logger, logfile)
 
     # use LLM to backport
-    project = Project(data.project_url, data.project_dir, data.error_message)
+    project = Project(
+        data.project_url, data.project_dir, data.error_message, data.source_dir
+    )
     project.repo.git.clean("-fdx")
 
     before_usage = get_usage(data.openai_key)

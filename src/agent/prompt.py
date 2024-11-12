@@ -21,6 +21,8 @@ You have 3 tools: `viewcode` `locate_symbol` and `validate`
 0. ref: the commit hash of the ref you want to test the patch on.
 1. patch: the patch you want to test. Each line of patch must start with `+`, `-` or ` ` (space) and use tab indentation. If migration is not required, put `need not ported`.
 
+REMEMBER Patch migration here is from one repository to another. So the refs you use here can only be target_release.
+
 [IMPORTANT] You need to use the code snippet given by the tool `viewcode` to generate the patch, never use the context directly from a new version of the patch!
 
 Example of a patch format:

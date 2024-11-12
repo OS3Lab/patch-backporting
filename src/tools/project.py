@@ -12,10 +12,12 @@ from tools.logger import logger
 
 
 class Project:
-    def __init__(self, project_url: str, dir: str, err_msg: str):
+    def __init__(self, project_url: str, dir: str, err_msg: str, s_dir: str):
         self.project_url = project_url
         self.dir = dir
         self.repo = Repo(dir)
+        self.s_dir = s_dir
+        self.s_repo = Repo(s_dir)
 
         if not err_msg:
             err_msg = "no err_msg"
@@ -31,12 +33,15 @@ class Project:
         self.symbol_map = {}
 
     def _checkout(self, ref: str) -> None:
-        self.repo.git.reset("--hard")
-        self.repo.git.checkout(ref)
+        try:
+            self.repo.git.reset("--hard")
+            self.repo.git.checkout(ref)
+        except:
+            return "Error commit id, please check if the commit id is correct."
 
     def _get_patch(self, ref: str) -> str:
         try:
-            return self.repo.git.show(f"{ref}^..{ref}")
+            return self.s_repo.git.show(f"{ref}^..{ref}")
         except:
             return "Error commit id, please check if the commit id is correct."
 

@@ -1,11 +1,12 @@
-project: libtiff
-project_url: https://github.com/libsdl-org/libtiff
-new_patch: 881a070194783561fd209b7c789a4e75566f7f37
-new_patch_parent: 6bb0f1171adfcccde2cd7931e74317cccb7db845
-target_release: 13f294c3d7837d630b3e9b08089752bc07b730e6
-sanitizer: LeakSanitizer
-error_message: "ERROR: LeakSanitizer"
-tag: CVE-2023-3576
+project: focal
+project_url: https://git.launchpad.net/~ubuntu-kernel/ubuntu/+source/linux/+git/focal/
+new_patch: 6fef2d4c00b5b8561ad68dd2b68173f5c6af1e75
+new_patch_parent: 6fef2d4c00b5b8561ad68dd2b68173f5c6af1e75^
+target_release: 57bcefe21bd81e71f199f5cef2ca473e27e8bd00
+sanitizer: 
+error_message: 
+tag: CVE-2024-26922
 openai_key: 
-project_dir: dataset/libsdl-org/libtiff
-patch_dataset_dir: ~/backports/patch_dataset/libtiff/CVE-2023-3576/
+source_dir: ~/backports/patch_dataset/tsbport/linux
+project_dir: ~/backports/patch_dataset/ubuntu/focal
+patch_dataset_dir: ~/backports/patch_dataset/ubuntu/CVE-2024-26922
