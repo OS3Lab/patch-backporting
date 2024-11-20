@@ -40,7 +40,9 @@ def main():
         if os.path.exists(f"{data.project_dir}{file}"):
             os.remove(f"{data.project_dir}{file}")
         os.symlink(f"{data.patch_dataset_dir}{file}", f"{data.project_dir}{file}")
-    project = Project(data.project_url, data.project_dir, data.patch_dataset_dir)
+    project = Project(
+        data.project_url, data.project_dir, data.patch_dataset_dir, data.source_dir
+    )
 
     # HACK: call func to test patch here, for example, I call `_validate`
     revised_patch, _ = revise_patch(patch, project.dir)
@@ -58,21 +60,17 @@ def main():
 
 if __name__ == "__main__":
     # HACK: put the patch here
-    patch = """
---- a/tools/tiffcp.c
-+++ b/tools/tiffcp.c
-@@ -1490,6 +1490,13 @@
- 		return 0;
- 	}
-+
-+	if ((imagew - tilew * spp) > INT_MAX) {
-+		TIFFError(TIFFFileName(in),
-+		          "Error, image raster scan line size is too large");
-+		return 0;
-+	}
-+
- 	iskew = imagew - tilew*spp;
- 	tilebuf = limitMalloc(tilesize);
- 	if (tilebuf == 0)
+    patch = r"""--- a/net/tls/tls_sw.c
++++ b/net/tls/tls_sw.c
+@@ -2427,7 +2427,7 @@ static bool tls_is_tx_ready(struct tls_sw_context_tx *ctx)
+ {
+ 	struct tls_rec *rec;
+ 
+-	rec = list_first_entry(&ctx->tx_list, struct tls_rec, list);
++	rec = list_first_entry_or_null(&ctx->tx_list, struct tls_rec, list);
+ 	if (!rec)
+ 		return false;
+ 
+
 """
     main()
