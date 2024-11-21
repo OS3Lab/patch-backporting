@@ -33,6 +33,9 @@ class Project:
         self.testcase_succeeded = False
         self.poc_succeeded = False
         self.symbol_map = {}
+        self.now_hunk = ""
+        self.now_hunk_num = 0
+        self.hunk_log_info = {}
 
     def _checkout(self, ref: str) -> None:
         self.repo.git.reset("--hard")
@@ -121,6 +124,72 @@ class Project:
             return self.symbol_map[ref][symbol]
         else:
             return None
+
+    def _git_history(self) -> str:
+        """
+        XXX: TBD
+
+        Args:
+            XXX
+
+        Returns:
+            XXX(str):
+        """
+        if self.now_hunk != "completed":
+            merge_base = self.repo.merge_base(
+                self.target_release, self.new_patch_parent
+            )
+            start_commit = merge_base[0].hexsha if merge_base else None
+            hunk = self.now_hunk
+            filepath = re.findall(r"--- a/(.*)", hunk)[0]
+            chunks = re.findall(r"@@ -(\d+),(\d+) \+(\d+),(\d+) @@(.*)", hunk)[0]
+            start_line = chunks[0]
+            end_line = int(chunks[0]) + int(chunks[1]) - 1
+            log_message = self.repo.git.log(
+                "--oneline",
+                f"-L {start_line},{end_line}:{filepath}",
+                f"{start_commit}..{self.new_patch_parent}",
+            )
+            # save each hunk related refs
+            if self.now_hunk_num not in self.hunk_log_info:
+                sha_lines = re.findall(
+                    r".*\b[0-9a-fA-F]{12}\b.*", log_message, re.MULTILINE
+                )
+                self.hunk_log_info[self.now_hunk_num] = []
+                for line in sha_lines:
+                    self.hunk_log_info[self.now_hunk_num].append(line)
+            ret = log_message
+            ret += "\nIf there is only a simple modification it means that the code block has not changed and you just need to adapt the context in the corresponding position.\n"
+            ret += "If the change code block was initially modified to be many `+` lines, you can choose to execute `git_show` to determine the source of this code.\n"
+            return ret
+
+        else:
+            # XXX TBD
+            # JUST return each hunk related refs
+            pass
+
+    def _git_show(self) -> str:
+        """
+        Show commit message for a specific ref when LLM need.
+
+        Args:
+            ref (str): The reference of the target repository.
+
+        Returns:
+            message(str): The commit message of ref
+        """
+        try:
+            # XXX maybe too much context will confuse LLM, how could we refine it.
+            ref_line = self.hunk_log_info[self.now_hunk_num][-1]
+            ref = ref_line.split(" ")[0].strip()
+            log = self.repo.git.show(f"{ref}")
+            ret = log[: min(10001, len(log))]
+            ret += "\nThis commit carries a lot of information, and you can determine where the target code is fast in the old version based on the code changes in the commit."
+            ret += "\nPlease think step by step. Is the block of code that needs to be changed newly introduced in this commit?"
+            ret += "\nIf it is newly introduced should we consider that this hunk `need not ported`. If this commit shows that it was migrated from a certain function in a certain file, you might consider backtracking in the function of the file shown by the commit.\n"
+            return ret
+        except:
+            return "Something error, maybe you don't use git_history before or git_history is empty."
 
     def _apply_error_handling(self, ref: str, revised_patch: str) -> Tuple[str, str]:
         """
@@ -342,6 +411,7 @@ class Project:
             with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
                 f.write(revised_patch)
             try:
+                # XXX 这里应该把修正后的patch加到结果里面
                 self.repo.git.apply([f.name], v=True)
                 logger.debug(
                     f"The joined patch hunk {idx} could be applied successfully, file {f.name}"
@@ -560,6 +630,8 @@ class Project:
             creat_viewcode_tool(self),
             creat_locate_symbol_tool(self),
             create_validate_tool(self),
+            create_git_history_tool(self),
+            create_git_show_tool(self),
         )
 
 
@@ -598,3 +670,25 @@ def create_validate_tool(project: Project):
         return project._validate(ref, patch)
 
     return validate
+
+
+def create_git_history_tool(project: Project):
+    @tool
+    def git_history() -> str:
+        """
+        get history for lines which relate to patch hunk.
+        """
+        return project._git_history()
+
+    return git_history
+
+
+def create_git_show_tool(project: Project):
+    @tool
+    def git_show() -> str:
+        """
+        show change log for a specific ref
+        """
+        return project._git_show()
+
+    return git_show

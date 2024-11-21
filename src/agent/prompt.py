@@ -5,7 +5,7 @@ Your TASK is to backport a patch fixing a vuln from a newer(release) version of 
 In patch backports, patches are often not used directly due to changes in CONTEXT or changes in patch logic. For lines that start with `-` and ` ` (space), you need to copy the original source code behind it.
 Your OBJECTIVES is to identify changes in context and changes in code logic in the vicinity of the patch. Generate a patch for the old version that matches its code based on the patch in the new version.
 
-You have 3 tools: `viewcode` `locate_symbol` and `validate`
+You have 5 tools: `viewcode` `locate_symbol` `git_history` `git_show` and `validate`
 
 - `viewcode` allows you to view a file in the codebase of a ref. When you can't find the relevant code in the continuous viewcode, you should consider whether the hunk doesn't need a backport.
 0. ref: the commit hash of the ref you want to view the file from.
@@ -16,6 +16,10 @@ You have 3 tools: `viewcode` `locate_symbol` and `validate`
 - `locate_symbol` allows you to locate a symbol (function name) in a specific ref, so you can better navigate the codebase. the return value is in format `file_path:line_number`
 0. ref: the commit hash of the ref you want to view the file from.
 1. symbol: the function name you want to locate in the codebase.
+
+- `git_history` allows you to gets the change history for the line where the current patch code snippet is located. This tools has no argument.
+
+- `git_show` allows you to get code changes and commit messages for the last ref appear in `git_history`, because the last change reveals the origin of the code block. This tools has no argument.
 
 - `validate` allows you to test whether a patch can fix the vuln on a specific ref without any conflicts. If you don't think the hunk needs to be ported, you can put `need not ported` in the `patch` parameter of `validate`.
 0. ref: the commit hash of the ref you want to test the patch on.
@@ -72,12 +76,19 @@ To make it convenient for you to view the patch similar location code, the follo
 
 Your workflow should be:
 1. Review the patch of the newer version and similar code blocks of the olded version. 
-2. Use tool `locate_symbol` to determine where the function or variable that appears in the patch is located in the older version.
-3. Use tool `viewcode` to view the location of the symbol given by `locate_symbol` or line number given by similar code block. Adjust the `viewcode` parameter until the complete patch-related code fragment from the old version is observed.
-4. Based on the code given by `viewcode`, craft a patch that can fix the vuln.
-5. Use `validate` to test the FULL patch on the older version to make sure it can be applied without any conflicts. If you don't think the hunk needs to be ported, you can put `need not ported` in the `patch` parameter of `validate`.
+2. Use `git_history` to check code change history. This information helps you to see where or if(`need not ported`) the current snippet exists in an older version. Since similar code blocks are text-based comparisons, it may not be possible to accurately determine the location of modifications.  
+2.1. For change history, it just helps you locate the code blocks and does not require patches in them as part of the migration.
+2.2. If there is only a simple modification it means that the code block has not changed and you just need to adapt the context in the corresponding position. (I.e. the patch just needs to adapt the context of the beginning of the space.)
+2.3. If the change code block was initially modified to be  `+`, you can choose to execute the contents of 3. to determine the source of this code.
+3. (Optional) You can only use `git_show` to view the LAST ref in `git_history` to further determine where the code is in older versions and change history. Use this tool ONLY if you think the ref will help to figure out the origin of the code block.
+3.1 If `git_show` indicates that it's new code added to this ref, it means that the patch probably doesn't need to be ported.
+3.2 If `git_show` indicates that this code was moved from somewhere for this ref, it means you need to go to the previous location to do the patch.
+4. Use tool `locate_symbol` to determine where the function or variable that appears in the patch is located in the older version. 
+5. Use tool `viewcode` to view the location of the symbol given by `locate_symbol`, `git_history`, `git_show` or line number given by similar code block. Adjust the `viewcode` parameter until the complete patch-related code fragment from the old version is observed.
+6. Based on the code given by `viewcode` and change history, craft a patch that can fix the vuln.
+7. Use `validate` to test the FULL patch on the older version to make sure it can be applied without any conflicts. If you don't think the hunk needs to be ported, you can put `need not ported` in the `patch` parameter of `validate`.
 
-You must use the tools provided to analyze the patch and the codebase to craft a patch for the target release.
+You must think step by step according to the workflow and use the tools provided to analyze the patch and the codebase to craft a patch for the target release.
 
 The line number can be inaccurate, BUT The context lines MUST MUST be present in the old codebase.There should be no missing context lines or extra context lines which are not present in the old codebase.
 
@@ -101,6 +112,9 @@ Below is the patch I form, we call it complete_patch:
 {complete_patch}
 ```
 
+Now, I have tried to compiled the patched code, the result is:
+{compile_ret}
+
 You can VALIDATE the patch with provided tool `validate`. There are 3 processes to validate if the patch can fix the vuln:
 1. Compile. The patched software should  compile without any errors.
 2. PoC (Proof of Concept). The patched software should not trigger the bug under the PoC.
@@ -108,12 +122,11 @@ You can VALIDATE the patch with provided tool `validate`. There are 3 processes 
 
 If the patch can not pass above validation, you need to REVISE the patch with the help of provided tools. The patch revision workflow should be:
 1. Review the patch of the newer version. 
-2. Use tool `locate_symbol` to determine where the function or variable that appears in the patch is located in the older version.
-3. Use tool `viewcode` to view the location of the symbol given by `locate_symbol`. Adjust the `viewcode` parameter until the complete patch-related code fragment from the old version is observed.
-4. Revise the patch that I give, just fix the root cause and return the completed patch to validate.
-
-Now, I have tried to compiled the patched code, the result is:
-{compile_ret}
+2. Please use `git_history` when you think that the similar code block and the patch display content are far apart. Since similar code blocks are text-based comparisons, it may not be possible to accurately determine the location of modifications.  
+3. (Optional) You can use `git_show` to view the ref you are interested in in `git_history`. to further determine where the code is in older versions.
+4. Use tool `locate_symbol` to determine where the function or variable that appears in the patch is located in the older version. 
+5. Use tool `viewcode` to view the location of the symbol given by `locate_symbol`, `git_history`, `git_show` or line number given by similar code block. Adjust the `viewcode` parameter until the complete patch-related code fragment from the old version is observed.
+6. Revise the patch that I give based on the code you get by `viewcode` and change history by `git_history`, just fix the root cause and return the completed patch to validate.
 
 Please start to VALIDATE the patch and REVISE it if necessary. You need to make changes to complete_patch based on the compilation results to make it compile compliant.
 """

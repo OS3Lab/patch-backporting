@@ -30,8 +30,8 @@ def initial_agent(project: Project, api_key: str, debug_mode: bool):
             MessagesPlaceholder(variable_name="agent_scratchpad"),
         ]
     )
-    viewcode, locate_symbol, validate = project.get_tools()
-    tools = [viewcode, locate_symbol, validate]
+    viewcode, locate_symbol, validate, git_history, git_show = project.get_tools()
+    tools = [viewcode, locate_symbol, validate, git_history, git_show]
     agent = create_tool_calling_agent(llm, tools, prompt)
     agent_executor = AgentExecutor(
         agent=agent, tools=tools, verbose=debug_mode, max_iterations=30
@@ -57,6 +57,8 @@ def do_backport(
             block_list = re.findall(r"older version.\n(.*?)\nBesides,", ret, re.DOTALL)
             similar_block = "\n".join(block_list)
             logger.debug(f"Hunk {idx} can not be applied, using LLM to generate a fix")
+            project.now_hunk = pp
+            project.now_hunk_num = idx
             agent_executor.invoke(
                 {
                     "project_url": data.project_url,
@@ -76,6 +78,7 @@ def do_backport(
 
     project.all_hunks_applied_succeeded = True
     logger.info(f"Aplly all hunks in the patch      PASS")
+    project.now_hunk = "completed"
     complete_patch = "\n".join(project.succeeded_patches)
     project.repo.git.clean("-fdx")
     for file in os.listdir(data.patch_dataset_dir):
@@ -99,8 +102,9 @@ def do_backport(
             MessagesPlaceholder(variable_name="agent_scratchpad"),
         ]
     )
-    viewcode, locate_symbol, validate = project.get_tools()
-    tools = [viewcode, locate_symbol, validate]
+    # XXX maybe refactor initial_agent function to cover
+    viewcode, locate_symbol, validate, git_history, git_show = project.get_tools()
+    tools = [viewcode, locate_symbol, validate, git_history, git_show]
     agent = create_tool_calling_agent(llm, tools, prompt)
     agent_executor = AgentExecutor(
         agent=agent, tools=tools, verbose=True, max_iterations=20
