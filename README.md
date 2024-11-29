@@ -43,3 +43,13 @@ patch_dataset_dir: ~/backports/patch_dataset/libtiff/CVE-2023-3576/ # path to yo
 #                    └───┘                       
 ```
 
+## How to judge results?
+
+After going through the validation chain that exists, the results are analyzed for correctness manually(Compare to Ground Truth(GT)).
+
+First judge whether the generated patch matches the logical block of code modified by GT.(It doesn't say hunk match because there are some cases of hunk merging.)
+
+Secondly, check that the location of the code change is the same or equivalent to GT.
+
+Finally, check that the semantics of the modified code is equivalent to GT.
+
