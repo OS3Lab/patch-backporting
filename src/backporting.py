@@ -133,7 +133,7 @@ def main():
 
     # load and check config, create file log
     data = load_yml(config_file)
-    log_dir = "../logs"
+    log_dir = os.path.join("../logs","llama", data.tag)
     os.makedirs(log_dir, exist_ok=True)
     now = datetime.datetime.now().strftime("%m%d%H%M")
     logfile = os.path.join(log_dir, f"{data.project}-{data.tag}-{now}.log")
@@ -144,33 +144,17 @@ def main():
     project = Project(data)
     project.repo.git.clean("-fdx")
     start_time = time.time()
-    before_usage = get_usage(data.openai_key)
-    agent_executor, llm = initial_agent(project, data.openai_key, debug_mode)
+
+    agent_executor, llm = initial_agent(project, debug_mode)
     try:
         do_backport(agent_executor, project, data, llm, logfile)
         end_time = time.time()
-        time.sleep(10)
-        after_usage = get_usage(data.openai_key)
-        logger.debug(
-            f"This patch total cost: ${(after_usage['total_cost'] - before_usage['total_cost']):.2f}"
-        )
-        logger.debug(
-            f"This patch total consume tokens: {(after_usage['total_consume_tokens'] - before_usage['total_consume_tokens'])/1000}(k)"
-        )
         logger.debug(
             f"This patch total cost time: {int(end_time - start_time)} Seconds."
         )
     except KeyboardInterrupt:
         logger.debug("Start to calculate cost!")
         end_time = time.time()
-
-        after_usage = get_usage(data.openai_key)
-        logger.debug(
-            f"This patch total cost: ${(after_usage['total_cost'] - before_usage['total_cost']):.2f}"
-        )
-        logger.debug(
-            f"This patch total consume tokens: {(after_usage['total_consume_tokens'] - before_usage['total_consume_tokens'])/1000}(k)"
-        )
         logger.debug(
             f"This patch total cost time: {int(end_time - start_time)} Seconds."
         )

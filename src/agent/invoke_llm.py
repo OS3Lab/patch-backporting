@@ -18,14 +18,37 @@ from tools.project import Project
 from tools.utils import split_patch
 
 
-def initial_agent(project: Project, api_key: str, debug_mode: bool):
-    base_url = "https://api.openai.com/v1"
+def initial_agent(project: Project, debug_mode: bool):
+    # test for llama
+
+    # from openai import OpenAI
+
+    # client = OpenAI(
+    #     base_url="http://222.20.126.129:11434/v1",
+    #     # required but ignored
+    #     api_key="ollama",
+    # )
+
+    # response = client.chat.completions.create(
+    #     model="llama3.1",
+    #     messages=[
+    #         {
+    #             "role": "user",
+    #             "content": [
+    #                 {"type": "text", "text": "why is sky blue?"},
+    #             ],
+    #         }
+    #     ],
+    #     max_tokens=300,
+    # )
+    # print(response)
+    # exit(0)
 
     llm = ChatOpenAI(
         temperature=0.5,
-        model="gpt-4-turbo",
-        api_key=api_key,
-        openai_api_base=base_url,
+        model="llama3.1",
+        api_key="ollama",
+        base_url="http://222.20.126.129:11434/v1",
         verbose=True,
     )
 
