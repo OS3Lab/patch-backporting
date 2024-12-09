@@ -18,6 +18,7 @@ class Project:
         self.project_url = data.project_url
         self.dir = data.project_dir
         self.repo = Repo(data.project_dir)
+        self.tag = data.tag
 
         if not data.error_message:
             self.err_msg = "no err_msg"
@@ -498,6 +499,10 @@ class Project:
         with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
             f.write(complete_patch)
             logger.debug(f"The completed patch file {f.name}")
+        with open(
+            os.path.join("../logs", "llama", self.tag, "llm-1.patch"), "w"
+        ) as f:
+            f.write(complete_patch)
         pps = utils.split_patch(complete_patch, False)
         for idx, pp in enumerate(pps):
             revised_patch, fixed = utils.revise_patch(pp, self.dir, revise_context)
@@ -543,10 +548,12 @@ class Project:
         docker_command = [
             "docker",
             "run",
+            "-u",
+            "1006:1006",
             "-v",
             f"{self.dir}:{self.dir}",
             "--rm",
-            "build-kernel-ubuntu-16.04",
+            "build-kernel-ubuntu-20.04",
             "/bin/bash",
             "-c",
             f"cd {self.dir}; bash build.sh",

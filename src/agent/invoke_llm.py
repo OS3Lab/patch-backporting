@@ -122,6 +122,10 @@ def do_backport(
         )
         for patch in project.succeeded_patches:
             logger.info(patch)
+        with open(
+            os.path.join("../logs", "llama", data.cve_id, "llm-2.patch"), "w"
+        ) as f:
+            f.write("\n".join(project.succeeded_patches))
         return
 
     prompt = ChatPromptTemplate.from_messages(
