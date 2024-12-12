@@ -20,6 +20,7 @@ class Project:
         self.dir = data.project_dir
         self.repo = Repo(data.project_dir)
         self.tag = data.tag
+        self.target = data.target_release
 
         if not data.error_message:
             self.err_msg = "no err_msg"
@@ -83,12 +84,11 @@ class Project:
                     except:
                         continue
 
-    def _viewcode(self, ref: str, path: str, startline: int, endline: int) -> str:
+    def _viewcode(self, path: str, startline: int, endline: int) -> str:
         """
-        View a file from a specific ref of the target repository. Lines between startline and endline are shown.
+        View a file from older version of the repository. Lines between startline and endline are shown.
 
         Args:
-            ref (str): The specific ref of the target repository.
             path (str): The path of the file to view.
             startline (int): The starting line number to display.
             endline (int): The ending line number to display.
@@ -98,7 +98,7 @@ class Project:
                  If the file doesn't exist in the commit, a message indicating that is returned.
         """
         try:
-            file = self.repo.tree(ref) / path
+            file = self.repo.tree(self.target) / path
         except:
             return "This file doesn't exist in this commit."
         content = file.data_stream.read().decode("utf-8", errors="ignore")
@@ -124,7 +124,7 @@ class Project:
         Locate a symbol in a specific ref of the target repository.
 
         Args:
-            ref (str): The reference of the target repository.
+            ref (str): The commit id of the target repository.
             symbol (str): The symbol to locate.
 
         Returns:
@@ -285,13 +285,12 @@ class Project:
         except:
             return "Something error, maybe you don't use git_history before or git_history is empty."
 
-    def _apply_error_handling(self, ref: str, revised_patch: str) -> Tuple[str, str]:
+    def _apply_error_handling(self, revised_patch: str) -> Tuple[str, str]:
         """
         Generate feedback to llm when an error patch is applied.
         When a file is not found, it is looked for in the five most similar files.
 
         Args:
-            ref (str): The reference of the target repository.
             revised_patch (str): The patch to be applied.
 
         Returns:
@@ -306,7 +305,7 @@ class Project:
         min_distance = float("inf")
 
         try:
-            file = self.repo.tree(ref) / path
+            file = self.repo.tree(self.target) / path
             content = file.data_stream.read().decode("utf-8", errors="ignore")
             lines = content.split("\n")
             lineno, dist = utils.find_most_similar_block(
@@ -315,7 +314,7 @@ class Project:
         except:
             similar_files = utils.find_most_similar_files(path.split("/")[-1], self.dir)
             for similar_file in similar_files:
-                file = self.repo.tree(ref) / similar_file
+                file = self.repo.tree(self.target) / similar_file
                 content = file.data_stream.read().decode("utf-8", errors="ignore")
                 similar_lines = content.split("\n")
                 current_line, current_dist = utils.find_most_similar_block(
@@ -331,7 +330,7 @@ class Project:
         startline = max(lineno - 1, 0)
         endline = min(lineno + num_context, len(lines))
         block = "Here are lines {} through {} of file {} for commit {}.\n".format(
-            startline, endline, path, ref
+            startline, endline, path, self.target
         )
         block += "```code snippet\n"
         for i in range(startline, endline):
@@ -355,12 +354,11 @@ class Project:
             differ += "```\nPlease eliminate these diffs step by step. Be sure to eliminate these diffs the next time you generate a patch!\n"
         return block, differ
 
-    def _apply_file_move_handling(self, ref: str, old_patch: str) -> str:
+    def _apply_file_move_handling(self, old_patch: str) -> str:
         """
         If a patch cannot apply for "No such file", try to find the symbol and apply the patch to the correct file.
 
         Args:
-            ref (str): The reference string.
             old_patch (str): The patch that raises "No such file" when apply.
 
         Returns:
@@ -396,7 +394,7 @@ class Project:
                 # @@ -416,13 +416,7 @@ static void stop_sessions(void)
                 at_line = old_patch.split("\n")[2]
                 symbol_name = re.findall(r"\b\w+(?=\s*[{\(])", at_line)[0]
-                symbol_locations = self._locate_symbol(ref, symbol_name)
+                symbol_locations = self._locate_symbol(self.target, symbol_name)
                 if not symbol_locations:
                     logger.debug(
                         f"No {missing_file_path} and no {symbol_name} in the repo."
@@ -417,7 +415,7 @@ class Project:
         for file_path in file_paths:
             new_patch = old_patch.replace(missing_file_path, file_path)
             logger.debug(f"Try to apply patch to {file_path}.")
-            apply_ret = self._apply_hunk(ref, new_patch, False)
+            apply_ret = self._apply_hunk(new_patch, False)
             if "successfully" in apply_ret:
                 logger.debug(f"{missing_file_path} has been moved to {file_path}.")
                 return f"{missing_file_path} has been moved to {file_path}. Please use --- a/{file_path} in your patch.\n"
@@ -428,12 +426,11 @@ class Project:
         logger.debug(f"Patch can not be applied to {file_paths}.")
         return f"The target file has been moved, here is possible file paths:{file_paths}\n{ret}"
 
-    def _apply_hunk(self, ref: str, patch: str, revise_context: bool = False) -> str:
+    def _apply_hunk(self, patch: str, revise_context: bool = False) -> str:
         """
-        Apply a hunk to a specific ref of the target repository.
+        Apply a hunk to older version of the repository.
 
         Args:
-            ref (str): The reference of the target repository.
             patch (str): The patch to be applied.
 
         Returns:
@@ -444,7 +441,7 @@ class Project:
 
         """
         ret = ""
-        self._checkout(ref)
+        self._checkout(self.target)
         self.repo.git.reset("--hard")
         if revise_context:
             logger.debug("original patch:\n" + patch)
@@ -461,7 +458,7 @@ class Project:
         except Exception as e:
             if "No such file" in e.stderr:
                 logger.debug(f"File not found")
-                find_ret = self._apply_file_move_handling(ref, revised_patch)
+                find_ret = self._apply_file_move_handling(revised_patch)
                 ret += find_ret
             elif "corrupt patch" in e.stderr:
                 ret = "Unexpected corrupt patch, Please carefully check your answer, especially in your call tools arguments.\n"
@@ -469,7 +466,7 @@ class Project:
             else:
                 logger.debug(f"Context mismatch")
                 ret += "This patch does not apply because of CONTEXT MISMATCH. Context are patch lines that already exist in the file, that is, lines starting with ` ` and `-`. You should modify the error patch according to the context of older version.\n"
-                block, differ = self._apply_error_handling(ref, revised_patch)
+                block, differ = self._apply_error_handling(revised_patch)
                 ret += block
                 ret += "Besides, here is detailed info about how the context differs between the patch and the old version.\n"
                 ret += differ
@@ -477,14 +474,11 @@ class Project:
         self.repo.git.reset("--hard")
         return ret
 
-    def _compile_patch(
-        self, ref: str, complete_patch: str, revise_context: bool = False
-    ) -> str:
+    def _compile_patch(self, complete_patch: str, revise_context: bool = False) -> str:
         """
         If all hunks could be applied successfully, compiles the patched source code after applying the joined patch.
 
         Args:
-            ref (str): The reference to checkout before applying the patch.
             complete_patch (str): The complete patch to be applied.
 
         Returns:
@@ -495,7 +489,7 @@ class Project:
 
         """
         # apply joined patch
-        self._checkout(ref)
+        self._checkout(self.target)
         ret = ""
         with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
             f.write(complete_patch)
@@ -523,7 +517,7 @@ class Project:
                 )
                 # TODO: give feedback to LLM about which line can not be applied
                 ret = f"For the patch you just generated, there was an APPLY failure during testing. Specifically there was a context mismatch in hunk {idx} across the patch, below is part of the feedback I found for you.\n"
-                block, differ = self._apply_error_handling(ref, revised_patch)
+                block, differ = self._apply_error_handling(revised_patch)
                 ret += block
                 ret += f"Here is the source code near the hunk context for your reference, a good patch context should look exactly like the source code.\n"
                 ret += f"In addition to that, I've got more detailed error messages for you below where the context of your generated patch differs specifically from the source code context.(The line numbers below are all line numbers in the hunk, not the entire patch.)\n"
@@ -707,12 +701,11 @@ class Project:
             self.poc_succeeded = True
         return ret
 
-    def _validate(self, ref: str, patch: str) -> str:
+    def _validate(self, patch: str) -> str:
         """
         Validates a patch by using the `_compile_patch`, `_run_testcase`, and `_run_poc` methods.
 
         Args:
-            ref (str): The reference string.
             patch (str): The patch string.
 
         Returns:
@@ -723,7 +716,7 @@ class Project:
             ret = ""
             if not self.compile_succeeded:
                 ret += self._compile_patch(
-                    ref, patch, True if self.context_mismatch_times >= 1 else False
+                    patch, True if self.context_mismatch_times >= 1 else False
                 )
                 self.context_mismatch_times += 1
             if self.compile_succeeded and not self.testcase_succeeded:
@@ -741,7 +734,7 @@ class Project:
                 return "Patch applied successfully\n"
 
             ret = self._apply_hunk(
-                ref, patch, True if self.context_mismatch_times >= 2 else False
+                patch, True if self.context_mismatch_times >= 2 else False
             )
             if "CONTEXT MISMATCH" in ret:
                 self.context_mismatch_times += 1
@@ -780,22 +773,22 @@ def creat_locate_symbol_tool(project: Project):
 
 def creat_viewcode_tool(project: Project):
     @tool
-    def viewcode(ref: str, path: str, startline: int, endline: int) -> str:
+    def viewcode(path: str, startline: int, endline: int) -> str:
         """
         View a file from a specific ref of the target repository. Lines between startline and endline are shown.
         """
-        return project._viewcode(ref, path, startline, endline)
+        return project._viewcode(path, startline, endline)
 
     return viewcode
 
 
 def create_validate_tool(project: Project):
     @tool
-    def validate(ref: str, patch: str) -> str:
+    def validate(patch: str) -> str:
         """
         validate a patch on a specific ref of the target repository.
         """
-        return project._validate(ref, patch)
+        return project._validate(patch)
 
     return validate
 

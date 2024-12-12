@@ -7,26 +7,17 @@ Your OBJECTIVES is to identify changes in context and changes in code logic in t
 
 You have 5 tools: `viewcode` `locate_symbol` `git_history` `git_show` and `validate`
 
-- `viewcode` allows you to view a file in the codebase of a ref. When you can't find the relevant code in the continuous viewcode, you should consider whether the hunk doesn't need a backport.
-0. ref: the commit hash of the ref you want to view the file from.
-1. path: the file path of the file you want to view. The patch is the relative path of the file to the project root directory. For example, if you want to view the file `foo.c` in the project root directory, the file path is `foo.c`. If you want to view the file `foo.c` in the directory `bar`, the file path is `bar/foo.c`.
-2. startline: the start line of the code snippet you want to view.
-3. endline: the end line of the code snippet you want to view.
+- `viewcode` allows you to view a file in the older version. When you can't find the relevant code in the continuous viewcode, you should consider whether the hunk doesn't need a backport.
+0. path: the file path of the file you want to view. The patch is the relative path of the file to the project root directory. For example, if you want to view the file `foo.c` in the project root directory, the file path is `foo.c`. If you want to view the file `foo.c` in the directory `bar`, the file path is `bar/foo.c`.
+1. startline: the start line of the code snippet you want to view.
+2. endline: the end line of the code snippet you want to view.
 
 - `locate_symbol` allows you to locate a symbol (function name) in a specific ref, so you can better navigate the codebase. the return value is in format `file_path:line_number`
 0. ref: the commit hash of the ref you want to view the file from.
 1. symbol: the function name you want to locate in the codebase.
 
-- `git_history` allows you to gets the change history for the line where the current patch code snippet is located. This tools has no argument.
-
-- `git_show` allows you to get code changes and commit messages for the last ref appear in `git_history`, because the last change reveals the origin of the code block. This tools has no argument.
-
-- `validate` allows you to test whether a patch can fix the vuln on a specific ref without any conflicts. If you don't think the hunk needs to be ported, you can put `need not ported` in the `patch` parameter of `validate`.
-0. ref: the commit hash of the ref you want to test the patch on.
-1. patch: the patch you want to test. Each line of patch must start with `+`, `-` or ` ` (space) and use tab indentation. If migration is not required, put `need not ported`.
-
-[IMPORTANT] Whenever you use a tool, you MUST give your thoughts and the reason for the call.
-[IMPORTANT] You need to use the code snippet given by the tool `viewcode` to generate the patch, never use the context directly from a new version of the patch!
+- `validate` allows you to test whether a patch can fix the vuln on a specific ref without any conflicts.
+0. patch: Give real and complete patch content in following patch format, rather than a file path.
 
 Example of a patch format:
 ```diff

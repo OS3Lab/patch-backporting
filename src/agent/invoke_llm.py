@@ -57,7 +57,7 @@ def do_backport(
     for idx, pp in enumerate(pps):
         project.round_succeeded = False
         project.context_mismatch_times = 0
-        ret = project._apply_hunk(data.target_release, pp, False)
+        ret = project._apply_hunk(pp, False)
         if project.round_succeeded:
             logger.debug(f"Hunk {idx} can be applied without any conflicts")
             continue
@@ -94,7 +94,7 @@ def do_backport(
             os.remove(f"{data.project_dir}{file}")
         shutil.copy2(f"{data.patch_dataset_dir}{file}", f"{data.project_dir}{file}")
     project.context_mismatch_times = 0
-    validate_ret = project._validate(data.target_release, complete_patch)
+    validate_ret = project._validate(complete_patch)
     if project.poc_succeeded:
         logger.info(
             f"Successfully backport the patch to the target release {data.target_release}"
