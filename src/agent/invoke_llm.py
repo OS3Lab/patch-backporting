@@ -6,6 +6,7 @@ import shutil
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.callbacks import FileCallbackHandler
+from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 
 from agent.prompt import (
@@ -18,38 +19,15 @@ from tools.logger import logger
 from tools.project import Project
 from tools.utils import split_patch
 
+# from langchain.globals import set_debug
+# set_debug(True)
+
+
 
 def initial_agent(project: Project, debug_mode: bool):
-    # test for llama
-
-    # from openai import OpenAI
-
-    # client = OpenAI(
-    #     base_url="http://222.20.126.129:11434/v1",
-    #     # required but ignored
-    #     api_key="ollama",
-    # )
-
-    # response = client.chat.completions.create(
-    #     model="llama3.1",
-    #     messages=[
-    #         {
-    #             "role": "user",
-    #             "content": [
-    #                 {"type": "text", "text": "why is sky blue?"},
-    #             ],
-    #         }
-    #     ],
-    #     max_tokens=300,
-    # )
-    # print(response)
-    # exit(0)
-
-    llm = ChatOpenAI(
+    llm = ChatOllama(
         temperature=0.5,
-        model="llama3.1",
-        api_key="ollama",
-        base_url="http://222.20.126.129:11434/v1",
+        model="llama3.3",
         verbose=True,
     )
 
