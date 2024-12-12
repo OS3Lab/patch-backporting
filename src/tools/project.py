@@ -1,3 +1,4 @@
+import datetime
 import os
 import re
 import subprocess
@@ -499,8 +500,10 @@ class Project:
         with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
             f.write(complete_patch)
             logger.debug(f"The completed patch file {f.name}")
+        now = datetime.datetime.now().strftime("%m%d%H%M")
         with open(
-            os.path.join("../logs", "llama", self.tag, "llm-1.patch"), "w"
+            os.path.join("../logs/llama", self.tag, f"llm-1-{now}.patch"),
+            "w",
         ) as f:
             f.write(complete_patch)
         pps = utils.split_patch(complete_patch, False)
