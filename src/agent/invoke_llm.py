@@ -17,7 +17,7 @@ def initial_agent(project: Project, api_key: str, debug_mode: bool):
 
     llm = ChatOpenAI(
         temperature=0.5,
-        model="gpt-4-turbo",
+        model="gpt-4o-2024-08-06",
         api_key=api_key,
         openai_api_base=base_url,
         verbose=True,
