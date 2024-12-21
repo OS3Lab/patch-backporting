@@ -165,124 +165,6 @@ class Project:
 
         return symbols.get(most_similar), most_similar
 
-    def _git_history(self) -> str:
-        """
-        XXX: TBD
-
-        Args:
-            XXX
-
-        Returns:
-            XXX(str):
-        """
-        if self.now_hunk != "completed":
-            merge_base = self.repo.merge_base(
-                self.target_release, self.new_patch_parent
-            )
-            start_commit = merge_base[0].hexsha if merge_base else None
-            hunk = self.now_hunk
-            filepath = re.findall(r"--- a/(.*)", hunk)[0]
-            chunks = re.findall(r"@@ -(\d+),(\d+) \+(\d+),(\d+) @@(.*)", hunk)[0]
-            start_line = chunks[0]
-            end_line = int(chunks[0]) + int(chunks[1]) - 1
-            log_message = self.repo.git.log(
-                "--oneline",
-                f"-L {start_line},{end_line}:{filepath}",
-                f"{start_commit}..{self.new_patch_parent}",
-            )
-            # save each hunk related refs
-            if self.now_hunk_num not in self.hunk_log_info and log_message:
-                last_context = list(utils.split_patch(log_message, False))[-1]
-                (
-                    _,
-                    context_line_num,
-                    self.last_context,
-                    add_line_num,
-                ) = utils.extract_context(last_context.split("\n")[3:])
-                self.add_percent = add_line_num / (add_line_num + context_line_num)
-
-                self.hunk_log_info[self.now_hunk_num] = []
-                patch_list = log_message.split("\n")
-                for idx, line in enumerate(patch_list):
-                    if line.startswith("diff --git"):
-                        sha_num = patch_list[idx - 2].split(" ")[0]
-                        self.hunk_log_info[self.now_hunk_num].append(sha_num)
-
-            ret = log_message[len(log_message) - 5001 : -1]
-            ret += "\nYou need to do the following analysis based on the information in the last commit:\n"
-            ret += "Analyze the code logic of the context of the patch to be ported in this commit step by step.\n"
-            ret += "If code logic already existed before this commit, the patch context can be assumed to remain in a similar location. Use `locate` and `viewcode` to check your results.\n"
-            ret += "If code logic were added in this commit, then you need to `git_show` for further details.\n"
-            return ret
-
-        else:
-            # XXX TBD
-            # JUST return each hunk related refs
-            pass
-
-    def _git_show(self) -> str:
-        """
-        Show commit message for a specific ref when LLM need.
-
-        Args:
-            ref (str): The reference of the target repository.
-
-        Returns:
-            message(str): The commit message of ref
-        """
-        try:
-            # XXX maybe too much context will confuse LLM, how could we refine it.
-            ref_line = self.hunk_log_info[self.now_hunk_num][-1]
-            ref = ref_line.split(" ")[0].strip()
-            log = self.repo.git.show(f"{ref}")
-            pps = utils.split_patch(log, False)
-            dist = float("inf")
-            last_context_len = len(self.last_context)
-            best_context = []
-            file_path = ""
-            file_no = 0
-
-            for idx, pp in enumerate(pps):
-                try:
-                    file_path_i = re.findall(r"--- a/(.*)", pp)[0]
-                    chunks = re.findall(r"@@ -(\d+),(\d+) \+(\d+),(\d+) @@(.*)", pp)[0]
-                    contexts, _, _, _ = utils.extract_context(pp.split("\n")[3:])
-                    if (int(chunks[1]) - int(chunks[3])) < last_context_len:
-                        continue
-                    lineno, dist_i = utils.find_most_similar_block(
-                        self.last_context, contexts, last_context_len, False
-                    )
-                    if dist_i < dist:
-                        best_context = contexts[
-                            lineno - 1 : lineno - 1 + last_context_len
-                        ]
-                        dist = dist_i
-                        file_path = file_path_i
-                        file_no = int(chunks[0]) + lineno - 1
-                except:
-                    continue
-
-            ret = ""
-            stat = self.repo.git.show("--stat", f"{ref}")
-            ret += stat[0 : min(len(stat), 3000)]
-            ret += "\n"
-            if self.add_percent < 0.6:
-                ret += f"[IMPORTANT] The relevant code shown by `git_history` is not fully `+` lines.\n"
-                ret += f"[IMPORTANT] This means that the code in question was not added or migrated in this commit.\n"
-                ret += f"[IMPORTANT] Please think step by step and check the abstract below carefully. If error exists in abstract, please ignore the info below.\n"
-            elif best_context:
-                ret += f"Because the commit's code change maybe too long, so I generate the abstract of the code change to show you how code changed in this commit.\n"
-                ret += f"Commit shows that the patch code in old version maybe in the file {file_path} around line number {file_no} to {file_no + last_context_len}. The code is below\n"
-                code_snippets = "\n".join(best_context)
-                ret += f"{code_snippets}"
-                ret += f"\nYou can call `viewcode` and `locate_symbol` to find the relevant code based on this information step by step."
-            else:
-                ret += f"This commit shows that there is a high probability that this code is new, so the corresponding code segment cannot be found in the old version.\n"
-                ret += f"You can call `viewcode` and `locate_symbol` to further check the results step by step. For newly introduced code, we consider that this hunk `need not ported`.\n"
-            return ret
-        except:
-            return "Something error, maybe you don't use git_history before or git_history is empty."
-
     def _apply_error_handling(self, ref: str, revised_patch: str) -> Tuple[str, str]:
         """
         Generate feedback to llm when an error patch is applied.
@@ -742,8 +624,6 @@ class Project:
             creat_viewcode_tool(self),
             creat_locate_symbol_tool(self),
             create_validate_tool(self),
-            create_git_history_tool(self),
-            create_git_show_tool(self),
         )
 
 
@@ -788,25 +668,3 @@ def create_validate_tool(project: Project):
         return project._validate(ref, patch)
 
     return validate
-
-
-def create_git_history_tool(project: Project):
-    @tool
-    def git_history() -> str:
-        """
-        get history for lines which relate to patch hunk.
-        """
-        return project._git_history()
-
-    return git_history
-
-
-def create_git_show_tool(project: Project):
-    @tool
-    def git_show() -> str:
-        """
-        show change log for a specific ref
-        """
-        return project._git_show()
-
-    return git_show

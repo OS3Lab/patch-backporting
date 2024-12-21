@@ -36,8 +36,8 @@ def initial_agent(project: Project, api_key: str, debug_mode: bool):
             MessagesPlaceholder(variable_name="agent_scratchpad"),
         ]
     )
-    viewcode, locate_symbol, validate, git_history, git_show = project.get_tools()
-    tools = [viewcode, locate_symbol, validate, git_history, git_show]
+    viewcode, locate_symbol, validate = project.get_tools()
+    tools = [viewcode, locate_symbol, validate]
     agent = create_tool_calling_agent(llm, tools, prompt)
     agent_executor = AgentExecutor(
         agent=agent, tools=tools, verbose=debug_mode, max_iterations=30
