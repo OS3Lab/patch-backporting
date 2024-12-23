@@ -211,7 +211,7 @@ class Project:
             ret = log_message[len(log_message) - 5001 : -1]
             ret += "\nYou need to do the following analysis based on the information in the last commit:\n"
             ret += "Analyze the code logic of the context of the patch to be ported in this commit step by step.\n"
-            ret += "If code logic already existed before this commit, the patch context can be assumed to remain in a similar location. Use `locate` and `viewcode` to check your results.\n"
+            ret += "If code logic already existed before this commit, the patch context can be assumed to remain in a similar location. Use `viewcode` to check your results.\n"
             ret += "If code logic were added in this commit, then you need to `git_show` for further details.\n"
             return ret
 
@@ -275,10 +275,10 @@ class Project:
                 ret += f"Commit shows that the patch code in old version maybe in the file {file_path} around line number {file_no} to {file_no + last_context_len}. The code is below\n"
                 code_snippets = "\n".join(best_context)
                 ret += f"{code_snippets}"
-                ret += f"\nYou can call `viewcode` and `locate_symbol` to find the relevant code based on this information step by step."
+                ret += f"\nYou can call `viewcode` to find the relevant code based on this information step by step."
             else:
                 ret += f"This commit shows that there is a high probability that this code is new, so the corresponding code segment cannot be found in the old version.\n"
-                ret += f"You can call `viewcode` and `locate_symbol` to further check the results step by step. For newly introduced code, we consider that this hunk `need not ported`.\n"
+                ret += f"You can call `viewcode` to further check the results step by step. For newly introduced code, we consider that this hunk `need not ported`.\n"
             return ret
         except:
             return "Something error, maybe you don't use git_history before or git_history is empty."
@@ -387,29 +387,29 @@ class Project:
             file_paths.append(file_path)
 
         # locate target file by symbol or utils.find_most_similar_files
-        if not file_paths:
-            try:
-                # XXX: find symbol: the word before the first '{' or '('
-                # @@ -135,7 +135,6 @@ struct ksmbd_transport_ops {
-                # @@ -416,13 +416,7 @@ static void stop_sessions(void)
-                at_line = old_patch.split("\n")[2]
-                symbol_name = re.findall(r"\b\w+(?=\s*[{\(])", at_line)[0]
-                symbol_locations = self._locate_symbol(ref, symbol_name)
-                if not symbol_locations:
-                    logger.debug(
-                        f"No {missing_file_path} and no {symbol_name} in the repo."
-                    )
-                    file_paths = utils.find_most_similar_files(
-                        missing_file_path.split("/")[-1], self.dir
-                    )
-                else:
-                    logger.debug(f"Find {symbol_name} in {symbol_locations}.")
-                    file_paths = [item[0] for item in symbol_locations]
-            except:
-                logger.debug("Can not find a symbol in given patch.")
-                file_paths = utils.find_most_similar_files(
-                    missing_file_path.split("/")[-1], self.dir
-                )
+        # if not file_paths:
+        #     try:
+        #         # XXX: find symbol: the word before the first '{' or '('
+        #         # @@ -135,7 +135,6 @@ struct ksmbd_transport_ops {
+        #         # @@ -416,13 +416,7 @@ static void stop_sessions(void)
+        #         at_line = old_patch.split("\n")[2]
+        #         symbol_name = re.findall(r"\b\w+(?=\s*[{\(])", at_line)[0]
+        #         symbol_locations = self._locate_symbol(ref, symbol_name)
+        #         if not symbol_locations:
+        #             logger.debug(
+        #                 f"No {missing_file_path} and no {symbol_name} in the repo."
+        #             )
+        #             file_paths = utils.find_most_similar_files(
+        #                 missing_file_path.split("/")[-1], self.dir
+        #             )
+        #         else:
+        #             logger.debug(f"Find {symbol_name} in {symbol_locations}.")
+        #             file_paths = [item[0] for item in symbol_locations]
+        #     except:
+        #         logger.debug("Can not find a symbol in given patch.")
+        #         file_paths = utils.find_most_similar_files(
+        #             missing_file_path.split("/")[-1], self.dir
+        #         )
 
         # try to apply patch to the target files
         for file_path in file_paths:
@@ -532,33 +532,33 @@ class Project:
             self.compile_succeeded = True
             return ret
 
-        # build_process = subprocess.Popen(
-        #     ["/bin/bash", "build.sh"],
-        #     stdin=subprocess.DEVNULL,
-        #     stdout=subprocess.PIPE,
-        #     stderr=subprocess.PIPE,
-        #     cwd=self.dir,
-        #     text=True,
-        # )
-        docker_command = [
-            "docker",
-            "run",
-            "-v",
-            f"{self.dir}:{self.dir}",
-            "--rm",
-            "build-kernel-ubuntu-16.04",
-            "/bin/bash",
-            "-c",
-            f"cd {self.dir}; bash build.sh",
-        ]
         build_process = subprocess.Popen(
-            docker_command,
+            ["/bin/bash", "build.sh"],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=self.dir,
             text=True,
         )
+        # docker_command = [
+        #     "docker",
+        #     "run",
+        #     "-v",
+        #     f"{self.dir}:{self.dir}",
+        #     "--rm",
+        #     "build-kernel-ubuntu-16.04",
+        #     "/bin/bash",
+        #     "-c",
+        #     f"cd {self.dir}; bash build.sh",
+        # ]
+        # build_process = subprocess.Popen(
+        #     docker_command,
+        #     stdin=subprocess.DEVNULL,
+        #     stdout=subprocess.PIPE,
+        #     stderr=subprocess.PIPE,
+        #     cwd=self.dir,
+        #     text=True,
+        # )
         try:
             _, compile_result = build_process.communicate(timeout=60 * 60)
         except subprocess.TimeoutExpired:
@@ -587,7 +587,7 @@ class Project:
             ret += "Next I'll give you the error message during compiling, and you should modify the error patch. "
             ret += f"Here is the error message:\n{error_lines}\n"
             ret += "Please revise the patch with above error message. "
-            ret += "Or use tools `locate_symbol` and `viewcode` to re-check patch-related code snippet. "
+            ret += "Or use tools `viewcode` to re-check patch-related code snippet. "
             ret += "Please DO NOT send the same patch to me, repeated patches will harm the lives of others.\n"
             self.repo.git.reset("--hard")
         else:
@@ -635,7 +635,7 @@ class Project:
             ret += "Next I'll give you the error message during running the testcase, and you should modify the previous error patch according to this section. "
             ret += f"Here is the error message:\n{testcase_result}\n"
             ret += "Please revise the patch with above error message. "
-            ret += "Or use tools `locate_symbol` and `viewcode` to re-check patch-related code snippet. "
+            ret += "Or use tools `viewcode` to re-check patch-related code snippet. "
             ret += "Please DO NOT send the same patch to me, repeated patches will harm the lives of others.\n"
             self.compile_succeeded = False
         else:
@@ -685,7 +685,7 @@ class Project:
             ret += "Next I'll give you the error message during running the PoC, and you should modify the previous error patch according to this section. "
             ret += f"Here is the error message:\n{poc_result}\n"
             ret += "Please revise the patch with above error message. "
-            ret += "Or use tools `locate_symbol` and `viewcode` to re-check patch-related code snippet. "
+            ret += "Or use tools `viewcode` to re-check patch-related code snippet. "
             ret += "Please DO NOT send the same patch to me, repeated patches will harm the lives of others.\n"
             self.compile_succeeded = False
             self.testcase_succeeded = False
