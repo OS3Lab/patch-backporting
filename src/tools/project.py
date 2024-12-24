@@ -713,7 +713,7 @@ class Project:
             ret = ""
             if not self.compile_succeeded:
                 ret += self._compile_patch(
-                    ref, patch, True if self.context_mismatch_times >= 1 else False
+                    ref, patch, False if self.context_mismatch_times >= 1 else False
                 )
                 self.context_mismatch_times += 1
             if self.compile_succeeded and not self.testcase_succeeded:
@@ -731,7 +731,7 @@ class Project:
                 return "Patch applied successfully\n"
 
             ret = self._apply_hunk(
-                ref, patch, True if self.context_mismatch_times >= 2 else False
+                ref, patch, False if self.context_mismatch_times >= 2 else False
             )
             if "CONTEXT MISMATCH" in ret:
                 self.context_mismatch_times += 1
