@@ -109,8 +109,8 @@ def do_backport(
         ]
     )
     # XXX maybe refactor initial_agent function to cover
-    viewcode, locate_symbol, validate = project.get_tools()
-    tools = [viewcode, locate_symbol, validate]
+    viewcode, validate = project.get_tools()
+    tools = [viewcode, validate]
     agent = create_tool_calling_agent(llm, tools, prompt)
     agent_executor = AgentExecutor(
         agent=agent, tools=tools, verbose=True, max_iterations=20
