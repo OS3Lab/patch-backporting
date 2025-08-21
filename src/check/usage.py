@@ -18,6 +18,8 @@ price = {
     "gpt-4-0125-preview": (0.01, 0.03),
     "gpt-4o-2024-05-13": (0.005, 0.015),
     "gpt-4o-2024-08-06": (0.0025, 0.01),
+    "o4-mini-2025-04-16": (0, 0),
+    "gpt-4.1-2025-04-14": (0, 0),
 }
 
 
@@ -54,7 +56,8 @@ def get_usage(api_key):
             total_consume_output += item["n_generated_tokens_total"]
             total_price += item["n_generated_tokens_total"] * output_p / 1000
         else:
-            print(f"Unknown model: {item['snapshot_id']}")
+            pass
+            # print(f"Unknown model: {item['snapshot_id']}")
     result = {
         "current_time": datetime.datetime.now(),
         "total_cost": total_price,

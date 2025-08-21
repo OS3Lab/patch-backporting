@@ -5,7 +5,7 @@ Your TASK is to backport a patch fixing a vuln from a newer(release) version of 
 In patch backports, patches are often not used directly due to changes in CONTEXT or changes in patch logic. For lines that start with `-` and ` ` (space), you need to copy the original source code behind it.
 Your OBJECTIVES is to identify changes in context and changes in code logic in the vicinity of the patch. Generate a patch for the old version that matches its code based on the patch in the new version.
 
-You have 5 tools: `viewcode` `locate_symbol` and `validate`
+You have 2 tools: `viewcode` and `validate`
 
 - `viewcode` allows you to view a file in the codebase of a ref. When you can't find the relevant code in the continuous viewcode, you should consider whether the hunk doesn't need a backport.
 0. ref: the commit hash of the ref you want to view the file from.
@@ -13,16 +13,13 @@ You have 5 tools: `viewcode` `locate_symbol` and `validate`
 2. startline: the start line of the code snippet you want to view.
 3. endline: the end line of the code snippet you want to view.
 
-- `locate_symbol` allows you to locate a symbol (function name) in a specific ref, so you can better navigate the codebase. the return value is in format `file_path:line_number`
-0. ref: the commit hash of the ref you want to view the file from.
-1. symbol: the function name you want to locate in the codebase.
-
 - `validate` allows you to test whether a patch can fix the vuln on a specific ref without any conflicts. If you don't think the hunk needs to be ported, you can put `need not ported` in the `patch` parameter of `validate`.
 0. ref: the commit hash of the ref you want to test the patch on.
 1. patch: the patch you want to test. Each line of patch must start with `+`, `-` or ` ` (space) and use tab indentation. If migration is not required, put `need not ported`.
 
 [IMPORTANT] Whenever you use a tool, you MUST give your thoughts and the reason for the call.
 [IMPORTANT] You need to use the code snippet given by the tool `viewcode` to generate the patch, never use the context directly from a new version of the patch!
+[IMPORTANT] You must use validate to finish the patch backporting process.
 
 Example of a patch format:
 ```diff
@@ -74,10 +71,9 @@ To make it convenient for you to view the patch similar location code, the follo
 
 Your workflow should be:
 1. Review the patch of the newer version and similar code blocks of the olded version. 
-2. Use tool `locate_symbol` to determine where the function or variable that appears in the patch is located in the older version. 
-3. Use tool `viewcode` to view the location of the symbol given by `locate_symbol` or line number given by similar code block. Adjust the `viewcode` parameter until the complete patch-related code fragment from the old version is observed.
-4. Based on the code given by `viewcode` and change history, craft a patch that can fix the vuln.
-5. Use `validate` to test the FULL patch on the older version to make sure it can be applied without any conflicts. If you don't think the hunk needs to be ported, you can put `need not ported` in the `patch` parameter of `validate`.
+2. Use tool `viewcode` to view the location of line number given by similar code block. Adjust the `viewcode` parameter until the complete patch-related code fragment from the old version is observed.
+3. Based on the code given by `viewcode` and change history, craft a patch that can fix the vuln.
+4. Use `validate` to test the FULL patch on the older version to make sure it can be applied without any conflicts. If you don't think the hunk needs to be ported, you can put `need not ported` in the `patch` parameter of `validate`.
 
 You must think step by step according to the workflow and use the tools provided to analyze the patch and the codebase to craft a patch for the target release.
 
@@ -113,9 +109,8 @@ You can VALIDATE the patch with provided tool `validate`. There are 3 processes 
 
 If the patch can not pass above validation, you need to REVISE the patch with the help of provided tools. The patch revision workflow should be:
 1. Review the patch of the newer version. 
-2. Use tool `locate_symbol` to determine where the function or variable that appears in the patch is located in the older version. 
-3. Use tool `viewcode` to view the location of the symbol given by `locate_symbol` or line number given by similar code block. Adjust the `viewcode` parameter until the complete patch-related code fragment from the old version is observed.
-4. Revise the patch that I give based on the code you get by `viewcode` , just fix the root cause and return the completed patch to validate.
+2. Use tool `viewcode` to view line number given by similar code block. Adjust the `viewcode` parameter until the complete patch-related code fragment from the old version is observed.
+3. Revise the patch that I give based on the code you get by `viewcode` , just fix the root cause and return the completed patch to validate.
 
 Please start to VALIDATE the patch and REVISE it if necessary. You need to make changes to complete_patch based on the compilation results to make it compile compliant.
 """
@@ -134,10 +129,6 @@ You have 3 tools: `viewcode` `locate_symbol` and `validate`
 1. path: the file path of the file you want to view. The patch is the relative path of the file to the project root directory. For example, if you want to view the file `foo.c` in the project root directory, the file path is `foo.c`. If you want to view the file `foo.c` in the directory `bar`, the file path is `bar/foo.c`.
 2. startline: the start line of the code snippet you want to view.
 3. endline: the end line of the code snippet you want to view.
-
-- `locate_symbol` allows you to locate a symbol (function name) in a specific ref, so you can better navigate the codebase. the return value is in format `file_path:line_number`
-0. ref: the commit hash of the ref you want to view the file from.
-1. symbol: the function name you want to locate in the codebase.
 
 - `validate` allows you to test whether a patch can fix the vuln on a specific ref without any conflicts. If you don't think the hunk needs to be ported, you can put `need not ported` in the `patch` parameter of `validate`.
 0. ref: the commit hash of the ref you want to test the patch on.

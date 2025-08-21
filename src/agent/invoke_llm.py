@@ -23,7 +23,7 @@ def initial_agent(project: Project, api_key: str, debug_mode: bool):
 
     llm = ChatOpenAI(
         temperature=0.5,
-        model="gpt-4-turbo",
+        model="gpt-4o-2024-08-06",
         api_key=api_key,
         openai_api_base=base_url,
         verbose=True,
@@ -36,8 +36,8 @@ def initial_agent(project: Project, api_key: str, debug_mode: bool):
             MessagesPlaceholder(variable_name="agent_scratchpad"),
         ]
     )
-    viewcode, locate_symbol, validate = project.get_tools()
-    tools = [viewcode, locate_symbol, validate]
+    viewcode, validate = project.get_tools()
+    tools = [viewcode, validate]
     agent = create_tool_calling_agent(llm, tools, prompt)
     agent_executor = AgentExecutor(
         agent=agent, tools=tools, verbose=debug_mode, max_iterations=30

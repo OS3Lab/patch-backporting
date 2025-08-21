@@ -46,7 +46,8 @@ class Project:
 
     def _get_patch(self, ref: str) -> str:
         try:
-            return self.repo.git.show(f"{ref}^..{ref}")
+            # return self.repo.git.show(f"{ref}^..{ref}")
+            return self.repo.git.diff(f"{ref}^", f"{ref}")
         except:
             return "Error commit id, please check if the commit id is correct."
 
@@ -464,6 +465,8 @@ class Project:
                     if "error:" in line.lower()
                 ]
             )
+            if "error" not in error_lines:
+                error_lines = compile_result
             logger.debug(error_lines)
             ret += "The source code could not be COMPILED successfully after applying the patch. "
             ret += "Next I'll give you the error message during compiling, and you should modify the error patch. "
@@ -622,30 +625,8 @@ class Project:
     def get_tools(self):
         return (
             creat_viewcode_tool(self),
-            creat_locate_symbol_tool(self),
             create_validate_tool(self),
         )
-
-
-def creat_locate_symbol_tool(project: Project):
-    @tool
-    def locate_symbol(ref: str, symbol: str) -> str:
-        """
-        Locate a symbol in a specific ref of the target repository.
-        """
-        res = project._locate_symbol(ref, symbol)
-        if res is not None:
-            return "\n".join([f"{file}:{line}" for file, line in res])
-        else:
-            res, most_similar = project._locate_similar_symbol(ref, symbol)
-            ret = f"The symbol {symbol} you are looking for does not exist in the current ref.\n"
-            ret += f"But here is a symbol similar to it. It's `{most_similar}`.\n"
-            ret += f"The file where this symbol is located is: \n"
-            ret += "\n".join([f"{file}:{line}" for file, line in res])
-            ret += f"\nPlease be careful to check that this symbol indicates the same thing as the previous symbol.\n"
-            return ret
-
-    return locate_symbol
 
 
 def creat_viewcode_tool(project: Project):
