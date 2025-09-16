@@ -12,7 +12,7 @@ source .venv/bin/activate
 
 ```shell
 cd src
-python do_on_fix.py --config example.yml # Remember fill out the config.
+python backporting.py --config example.yml --debug # Remember fill out the config.
 ```
 
 ## Config structure
