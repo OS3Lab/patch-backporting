@@ -1,5 +1,7 @@
 # patch-backporting
 
+The PDF version of our paper is located in the [docs/PortGPT.pdf](docs/PortGPT.pdf).
+
 ## Setup
 
 ```shell
@@ -53,3 +55,13 @@ Secondly, check that the **location** of the code change is the same or equivale
 
 Finally, check that the **semantics** of the modified code is equivalent to GT.
 
+## Citation
+
+```
+@inproceedings{portgpt,
+  title={PORTGPT: Towards Automated Backporting Using Large Language Models},
+  author={Zhaoyang Li and Zheng Yu and Jingyi Song and Meng Xu and Yuxuan Luo and Dongliang Mu},
+  booktitle={Proceedings of the 47rd IEEE Symposium on Security and Privacy},
+  year={2026}
+}
+```
