@@ -30,7 +30,13 @@ error_message: "ERROR: LeakSanitizer" # poc trigger message for poc, could be em
 tag: CVE-2023-3576
 openai_key: # Your openai key
 project_dir: dataset/libsdl-org/libtiff # path to your project
-patch_dataset_dir: ~/backports/patch_dataset/libtiff/CVE-2023-3576/ # path to your patchset, include biuld.sh, test.sh ....
+patch_dataset_dir: ~/backports/patch_dataset/libtiff/CVE-2023-3576/ # path to your patchset, include build.sh, test.sh ....
+
+# Optional: Azure OpenAI Configuration
+# use_azure: true
+# azure_endpoint: "https://your-resource.openai.azure.com/"
+# azure_deployment: "gpt-4"
+# azure_api_version: "2024-12-01-preview"
 
 #                    Version A           Version A(Fixed)     
 #   ┌───┐            ┌───┐             ┌───┐                  
@@ -44,6 +50,26 @@ patch_dataset_dir: ~/backports/patch_dataset/libtiff/CVE-2023-3576/ # path to yo
 #     └─────────────►│   ├────────────► ??                    
 #                    └───┘                       
 ```
+
+## LLM Provider Options
+
+PortGPT supports both OpenAI and Azure OpenAI:
+
+### Using OpenAI (Default)
+```yml
+openai_key: sk-your-openai-key
+use_azure: false  # or omit this line
+```
+
+### Using Azure OpenAI
+```yml
+openai_key: your-azure-api-key
+use_azure: true
+azure_endpoint: "https://your-resource.openai.azure.com/"
+azure_deployment: "gpt-4"  # or "gpt-5" if available
+azure_api_version: "2024-12-01-preview"
+```
+
 
 ## How to judge results?
 
