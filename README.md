@@ -2,6 +2,13 @@
 
 The PDF version of our paper is located in the [docs/PortGPT.pdf](docs/PortGPT.pdf).
 
+This repository includes a tagged snapshot corresponding to the version of the code used for our paper submission. 
+
+The tag **`sp26-submission`** marks the exact code state used in the submission to **IEEE S&P 2026** for the paper *“PortGPT: Towards Automated Backporting Using Large Language Models”*.  
+All experimental results reported in the paper are based on this tagged version.
+
+For reproducibility, please refer to this tag rather than the latest `main` branch.
+
 ## Setup
 
 ```shell
