@@ -1,16 +1,17 @@
-# 构建、使用文档
+[![zh-CN](https://img.shields.io/badge/Lang-中文-red.svg)](./Setup_and_Usage.zh-cn.md)
 
-## 一、构建方法
+# Build and Usage Guide
 
-### 代码仓说明
+## I. Build Instructions
 
-本项目共有两个代码仓：
+### Repository Description
 
-`patch_dataset`：包含真实世界中收集的 100 个 C/CPP 与 50 个 Golang CVE 补丁 backport 迁移失败案例。为每个项目的每个 CVE 单独准备数据，其中包含失败信息，编译脚本，testsuite 脚本(部分)，PoC 脚本(部分)。
+This project consists of two code repositories:
 
-`patch-backporting`：项目源码，其中包含与大模型交互代理及工具。
+* **`patch_dataset`**: Contains 150 real-world backport failure cases (100 C/C++ and 50 Golang CVE patches). Data is prepared individually for each CVE in every project, including failure information, build scripts, partial test suite scripts, and partial PoC (Proof of Concept) scripts.
+* **`patch-backporting`**: The project source code, which includes the agents for interacting with Large Language Models (LLMs) and utility tools.
 
-### 源码目录结构
+### Source Code Directory Structure
 
 ```text
 .
@@ -37,87 +38,92 @@
 └── test
     ├── test_hunk.py
     └── test_patch.py
+
 ```
 
-### 软件依赖
+### Software Prerequisites
 
-- Python >= 3.10
-- Ctags 5.9.0 `sudo apt install universal-ctags`
-- PDM 2.18.2 <https://github.com/pdm-project/pdm>
+* Python >= 3.10
+* Ctags 5.9.0 (`sudo apt install universal-ctags`)
+* PDM 2.18.2 ([https://github.com/pdm-project/pdm](https://github.com/pdm-project/pdm))
 
-### 依赖配置方法
+### Dependency Configuration
 
-1. 安装 PDM
+1. Install PDM
 
-   ```bash
-   curl -sSL https://pdm-project.org/install-pdm.py | python3 -
-   ```
+    ```bash
+    curl -sSL https://pdm-project.org/install-pdm.py | python3 -
+    ```
 
-2. 配置 Python 及其依赖
+2. Configure Python and Dependencies
 
-   ```bash
-   # 在patch-backporting路径下
-   $ pdm install
-   $ source .venv/bin/activate
-   ```
+    ```bash
+    # Inside the patch-backporting directory
+    $ pdm install
+    $ source .venv/bin/activate
+    ```
 
-## 二、使用方法
+## II. Usage Instructions
 
-### 数据配置
+### Data Configuration
 
-在开始测试前需要准备两部分数据，其一是 `config.yml` 包含 backport 的相关项目信息，其二是目标 backport 补丁相关的编译、测试脚本。
+Before starting a test, two components of data must be prepared: `config.yml` (containing project information for the backport) and the build/test scripts relevant to the target patch.
 
-1. 配置信息
+1. Configuration Information
 
-   ```yaml
-   # example config yaml
-   project: libtiff
-   project_url: https://github.com/libsdl-org/libtiff 
-   new_patch: 881a070194783561fd209b7c789a4e75566f7f37 # patch commit id in new version, Version A(Fixed)    
-   new_patch_parent: 6bb0f1171adfcccde2cd7931e74317cccb7db845 # patch parent commit, Version A 
-   target_release: 13f294c3d7837d630b3e9b08089752bc07b730e6 # commid id which need to be fixed, Version B 
-   sanitizer: LeakSanitizer # sanitizer type for poc, could be empty
-   error_message: "ERROR: LeakSanitizer" # poc trigger message for poc, could be empty
-   tag: CVE-2023-3576
-   openai_key: # Your openai key
-   project_dir: dataset/libsdl-org/libtiff # path to your project source code
-   patch_dataset_dir: ~/backports/patch_dataset/libtiff/CVE-2023-3576/ 
-   # path to your patchset, include build.sh, test.sh ....
+    ```yaml
+    # example config yaml
+    project: libtiff
+    project_url: https://github.com/libsdl-org/libtiff 
+    new_patch: 881a070194783561fd209b7c789a4e75566f7f37 # patch commit id in new version, Version A (Fixed)    
+    new_patch_parent: 6bb0f1171adfcccde2cd7931e74317cccb7db845 # patch parent commit, Version A 
+    target_release: 13f294c3d7837d630b3e9b08089752bc07b730e6 # commit id which needs to be fixed, Version B 
+    sanitizer: LeakSanitizer # sanitizer type for poc, could be empty
+    error_message: "ERROR: LeakSanitizer" # poc trigger message for poc, could be empty
+    tag: CVE-2023-3576
+    openai_key: # Your openai key
+    project_dir: dataset/libsdl-org/libtiff # path to your project source code
+    patch_dataset_dir: ~/backports/patch_dataset/libtiff/CVE-2023-3576/ 
+    # path to your patchset, include build.sh, test.sh ....
 
-   #                    Version A           Version A(Fixed)     
-   #   ┌───┐            ┌───┐             ┌───┐                  
-   #   │   ├───────────►│   ├────────────►│   │                  
-   #   └─┬─┘            └───┘             └───┘                  
-   #     │                                                       
-   #     │                                                       
-   #     │                                                       
-   #     │              Version B                                
-   #     │              ┌───┐                                    
-   #     └─────────────►│   ├────────────► ??                    
-   #                    └───┘
-   ```
+    #                    Version A           Version A(Fixed)     
+    #   ┌───┐            ┌───┐             ┌───┐                  
+    #   │   ├───────────►│   ├────────────►│   │                  
+    #   └─┬─┘            └───┘             └───┘                  
+    #     │                                                       
+    #     │                                                       
+    #     │                                                       
+    #     │              Version B                                
+    #     │              ┌───┐                                    
+    #     └─────────────►│   ├────────────► ??                    
+    #                    └───┘
 
-2. 相关脚本
+    ```
 
-   为了保证验证链的正常运行，需要提供编译、测试、PoC 脚本在 patch_dataset_dir 所指定的目录中。如下目录所示，编译脚本命名为 `build.sh`，测试脚本为 `test.sh`，`poc.sh` 为当前 CVE 的 PoC 触发脚本。并将脚本中所需的文件一起放入该目录中，工具在大模型生成补丁后会自动调用验证。
+2. Related Scripts
 
-   ```text
-   CVE-2023-3576
-   ├── build.sh
-   ├── config.yml
-   ├── poc
-   ├── poc.sh
-   └── test.sh
-   ```
+To ensure the verification chain functions correctly, you must provide build, test, and PoC scripts in the directory specified by `patch_dataset_dir`. As shown in the directory structure below, the build script should be named `build.sh`, the test script `test.sh`, and the CVE PoC trigger script `poc.sh`. Place any files required by these scripts into the same directory. The tool will automatically invoke these for verification after the LLM generates a patch.
 
-   当然，以上脚本缺失时本工具也可正常运行，但编译脚本可以为 backport 提供更多可能的信息。
+```text
+CVE-2023-3576
+├── build.sh
+├── config.yml
+├── poc
+├── poc.sh
+└── test.sh
+```
 
-### 测试
+*Note: The tool can function even if these scripts are missing, but providing a build script offers the backporting process more context and information.*
+
+### Testing
 
 ```bash
 python backporting.py --config example.yml --debug
 # python backporting.py --config YOUR_CONFIG [--debug]
 # python backporting.py -c YOUR_CONFIG [-d]
+
 ```
 
-测试时按如上命令执行 `src` 下的 `backporting` 脚本进行补丁迁移，在 `example.yml` 处替换为配置好的目标 yaml 文件。同时，debug mode 会提供更多与大模型交互的信息，以便查看迁移过程。在非 debug 模式下的测试输出如下：![非debug模式下的测试输出](public/image1.png)
+Execute the `backporting` script located in the `src` folder using the commands above to perform patch migration testing. Replace `example.yml` with your configured target YAML file.
+
+The `debug` mode provides detailed information regarding the interaction with the LLM, allowing you to monitor the migration process. The output for a test run in non-debug mode appears as follows:![Test output in non-debug mode](public/image1.png)
