@@ -1,4 +1,4 @@
-[![English](https://img.shields.io/badge/Lang-English-blue.svg)](./Setup_and_Usage.md)
+[![English](https://img.shields.io/badge/Lang-English-blue.svg)](/docs/setup-and-usage.md)
 
 # 构建、使用文档
 
