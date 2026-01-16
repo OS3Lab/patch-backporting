@@ -1,4 +1,4 @@
-[![zh-CN](https://img.shields.io/badge/Lang-中文-red.svg)](./Setup_and_Usage.zh-cn.md)
+[![zh-CN](https://img.shields.io/badge/Lang-中文-red.svg)](./setup-and-usage.zh-CN.md)
 
 # Build and Usage Guide
 
