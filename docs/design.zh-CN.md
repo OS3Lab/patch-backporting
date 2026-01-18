@@ -1,4 +1,4 @@
-[![English](https://img.shields.io/badge/Lang-English-blue.svg)](./Design.md)
+[![English](https://img.shields.io/badge/Lang-English-blue.svg)](./design.md)
 
 # 设计文档
 
