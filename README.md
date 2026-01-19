@@ -1,3 +1,5 @@
+[![zh-CN](https://img.shields.io/badge/Lang-中文-red.svg)](README.zh-CN.md)
+
 # patch-backporting
 
 The PDF version of our paper is located in the [docs/PortGPT.pdf](docs/PortGPT.pdf).
