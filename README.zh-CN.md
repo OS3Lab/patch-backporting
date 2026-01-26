@@ -26,6 +26,22 @@ cd src
 python backporting.py --config example.yml --debug # 记得填写配置文件
 ```
 
+## Docker 使用方法
+
+构建 Docker 镜像：
+
+```shell
+docker build -t patch-backporting .
+```
+
+运行容器：
+
+```shell
+# 请确保挂载了必要的目录（项目代码、配置文件、数据集）
+# 示例：假设当前目录下有 config.yml，数据集位于 /path/to/dataset
+docker run --rm -v $(pwd):/app/src -v /path/to/dataset:/path/to/dataset patch-backporting python backporting.py --config config.yml
+```
+
 ## 配置结构
 
 ```yml
