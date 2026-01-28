@@ -96,7 +96,7 @@ Finally, check that the **semantics** of the modified code is equivalent to GT.
 @inproceedings{portgpt,
   title={PORTGPT: Towards Automated Backporting Using Large Language Models},
   author={Zhaoyang Li and Zheng Yu and Jingyi Song and Meng Xu and Yuxuan Luo and Dongliang Mu},
-  booktitle={Proceedings of the 47rd IEEE Symposium on Security and Privacy},
+  booktitle={Proceedings of the 47th IEEE Symposium on Security and Privacy},
   year={2026}
 }
 ```
