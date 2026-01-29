@@ -42,6 +42,14 @@ Run the container:
 docker run --rm -v $(pwd):/app/src -v /path/to/dataset:/path/to/dataset patch-backporting python backporting.py --config config.yml
 ```
 
+Alternatively, you can use the interactive mode to execute scripts inside the container:
+
+```shell
+docker run --rm -it -v $(pwd):/app/src -v /path/to/dataset:/path/to/dataset patch-backporting /bin/bash
+# Inside the container
+python backporting.py --config config.yml
+```
+
 ## Config structure
 
 ```yml

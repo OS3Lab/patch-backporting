@@ -42,6 +42,14 @@ docker build -t patch-backporting .
 docker run --rm -v $(pwd):/app/src -v /path/to/dataset:/path/to/dataset patch-backporting python backporting.py --config config.yml
 ```
 
+或者，您可以使用交互模式在容器内执行脚本：
+
+```shell
+docker run --rm -it -v $(pwd):/app/src -v /path/to/dataset:/path/to/dataset patch-backporting /bin/bash
+# 在容器内部执行
+python backporting.py --config config.yml
+```
+
 ## 配置结构
 
 ```yml
