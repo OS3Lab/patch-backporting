@@ -1,0 +1,27 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# PDM
+pdm.lock
+.pdm-python
+
+# IDEs
+.idea/
+.vscode/
+
+# Project specific
+logs/
+.claude/

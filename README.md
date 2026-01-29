@@ -26,6 +26,22 @@ cd src
 python backporting.py --config example.yml --debug # Remember fill out the config.
 ```
 
+## Docker Usage
+
+Build the docker image:
+
+```shell
+docker build -t patch-backporting .
+```
+
+Run the container:
+
+```shell
+# Ensure you mount the necessary directories (code, config, datasets)
+# Example: assuming config.yml is in current dir and datasets are in /data
+docker run --rm -v $(pwd):/app/src -v /path/to/dataset:/path/to/dataset patch-backporting python backporting.py --config config.yml
+```
+
 ## Config structure
 
 ```yml
