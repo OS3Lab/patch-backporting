@@ -11,6 +11,10 @@
 
 为了复现结果，请参考此标签，而不是最新的 `main` 分支。
 
+## 演示 (Demo)
+
+[![asciicast](https://asciinema.org/a/8J9k0iBJ6IkdDmvr.svg)](https://asciinema.org/a/8J9k0iBJ6IkdDmvr)
+
 ## 安装设置
 
 ```shell
