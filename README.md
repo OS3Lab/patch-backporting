@@ -11,6 +11,10 @@ All experimental results reported in the paper are based on this tagged version.
 
 For reproducibility, please refer to this tag rather than the latest `main` branch.
 
+## Demo
+
+[![asciicast](https://asciinema.org/a/8J9k0iBJ6IkdDmvr.svg)](https://asciinema.org/a/8J9k0iBJ6IkdDmvr)
+
 ## Setup
 
 ```shell
