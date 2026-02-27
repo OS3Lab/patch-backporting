@@ -102,8 +102,18 @@ class Project:
         content = file.data_stream.read().decode("utf-8", errors="ignore")
         lines = content.split("\n")
         ret = []
-        if endline > len(lines):
-            startline -= endline - len(lines)
+        if not lines:
+            return "This file is empty.\n"
+        if startline > endline:
+            startline, endline = endline, startline
+        startline = max(1, startline)
+        if startline > len(lines):
+            ret.append(
+                f"This file only has {len(lines)} lines. Showing full file.\n"
+            )
+            startline = 1
+            endline = len(lines)
+        elif endline > len(lines):
             endline = len(lines)
             ret.append(
                 f"This file only has {len(lines)} lines. Here are lines {startline} through {endline}.\n"
